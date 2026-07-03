@@ -15,5 +15,6 @@ This folder keeps long-form project information out of the root README while pre
 ## Project Guides
 
 - [Architecture](ARCHITECTURE.md): package layers, loader strategy, planning model, and runtime boundary.
+- [Roadmap](ROADMAP.md): prioritized workstreams for Compose parity, Apple Container verification, Container Desktop integration, and release readiness.
 - [Development](DEVELOPMENT.md): local development commands, tests, smoke checks, and release hygiene.
 - [Contributing](CONTRIBUTING.md): contribution expectations, pull request checklist, issue guidance, and coding standards.

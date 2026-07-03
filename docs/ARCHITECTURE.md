@@ -137,4 +137,4 @@ Docker Compose itself delegates most of this to `compose-go`. Container Compose 
 
 ## Next Milestones
 
-1. Add direct `container-desktop` repository smoke tests once a local checkout is available.
+The active implementation roadmap lives in [ROADMAP.md](ROADMAP.md). The next architecture milestone is direct `container-desktop` repository smoke coverage once a local checkout or CI fixture is available.

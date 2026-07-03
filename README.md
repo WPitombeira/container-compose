@@ -116,6 +116,7 @@ See [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) and [docs/CONTAINER_DESKTOP_INT
 - [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md): install, first run, and common CLI workflows.
 - [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md): integration points for Container Desktop and other tools.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): package structure and planning architecture.
+- [docs/ROADMAP.md](docs/ROADMAP.md): prioritized roadmap for the next development phases.
 - [docs/COMPOSE_PARITY.md](docs/COMPOSE_PARITY.md): Compose behavior and support tiers.
 - [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md): contribution guidelines.
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): local development and verification commands.
