@@ -1,0 +1,13 @@
+name: container-compose-build
+services:
+  app:
+    build:
+      context: ./build
+      dockerfile: Dockerfile
+      args:
+        APP_ENV: demo
+      labels:
+        com.example.role: app
+      tags:
+        - container-compose-build-app:demo
+    command: ["echo", "hello from container-compose-build"]

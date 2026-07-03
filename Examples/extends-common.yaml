@@ -1,0 +1,10 @@
+services:
+  worker-base:
+    image: alpine:3.20
+    build:
+      context: worker
+      dockerfile: Dockerfile
+    env_file:
+      - worker/defaults.env
+    volumes:
+      - worker/config:/etc/worker:ro

@@ -1,0 +1,22 @@
+name: container-compose-demo
+
+services:
+  web:
+    image: nginx:alpine
+    depends_on:
+      - redis
+    ports:
+      - "8080:80"
+    networks:
+      - front
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+
+networks:
+  front: {}
+
+volumes:
+  redis-data: {}

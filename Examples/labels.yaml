@@ -1,0 +1,7 @@
+name: container-compose-labels
+services:
+  web:
+    image: nginx:alpine
+    labels:
+      com.example.role: frontend
+      com.example.owner: platform

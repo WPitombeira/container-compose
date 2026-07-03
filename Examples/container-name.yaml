@@ -1,0 +1,5 @@
+name: container-compose-named
+services:
+  web:
+    image: nginx:alpine
+    container_name: public-web

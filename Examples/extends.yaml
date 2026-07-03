@@ -1,0 +1,34 @@
+name: container-compose-extends
+services:
+  app-base:
+    image: nginx:alpine
+    environment:
+      LOG_LEVEL: info
+      SHARED: base
+    labels:
+      com.example.role: base
+      com.example.shared: "true"
+    ports:
+      - "8080:80"
+    volumes:
+      - app-cache:/var/cache/app:rw
+  web:
+    extends:
+      service: app-base
+    environment:
+      SHARED: web
+      WEB_ONLY: "1"
+    labels:
+      com.example.role: web
+    ports:
+      - "9090:90"
+    volumes:
+      - web-cache:/var/cache/app:ro
+  worker:
+    extends:
+      file: extends-common.yaml
+      service: worker-base
+    command: ["sh", "-c", "echo worker"]
+volumes:
+  app-cache: {}
+  web-cache: {}

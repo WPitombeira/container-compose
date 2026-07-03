@@ -1,0 +1,21 @@
+name: container-compose-depends
+services:
+  db:
+    image: postgres:16
+  migrate:
+    image: busybox
+    command: ["sh", "-c", "echo migrating"]
+    depends_on:
+      db:
+        condition: service_healthy
+        required: true
+  web:
+    image: nginx:alpine
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+        required: true
+      db:
+        condition: service_started
+        restart: true
+        required: false

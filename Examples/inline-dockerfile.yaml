@@ -1,0 +1,10 @@
+name: container-compose-inline-build
+
+services:
+  app:
+    image: container-compose-inline-app:dev
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM alpine:3.20
+        CMD ["echo", "hello from inline Dockerfile"]
