@@ -13,8 +13,23 @@ final class ComposeCompatibilityTests: XCTestCase {
             && $0.note.contains("orchestration")
         })
         XCTAssertTrue(matrix.entries.contains {
+            $0.composePath == "services.*.deploy.resources.reservations.generic_resources"
+            && $0.status == .preservedDiagnostic
+            && $0.note.contains("Generic resource")
+        })
+        XCTAssertTrue(matrix.entries.contains {
+            $0.composePath == "services.*.deploy.update_config"
+            && $0.status == .preservedDiagnostic
+            && $0.note.contains("Rolling update")
+        })
+        XCTAssertTrue(matrix.entries.contains {
             $0.composePath == "services.*.extra_hosts"
             && $0.status == .preservedDiagnostic
+        })
+        XCTAssertTrue(matrix.entries.contains {
+            $0.composePath == "services.*.privileged"
+            && $0.status == .preservedDiagnostic
+            && $0.note.contains("not mapped")
         })
         XCTAssertTrue(matrix.entries.contains {
             $0.composePath == "services.*.build.extra_hosts"
