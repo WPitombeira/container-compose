@@ -131,3 +131,5 @@ Start with [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 ## License
 
 Container Compose is open source under the [MIT License](LICENSE).
+
+Third-party references and dependency notices are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

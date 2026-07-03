@@ -18,3 +18,5 @@ This folder keeps long-form project information out of the root README while pre
 - [Roadmap](ROADMAP.md): prioritized workstreams for Compose parity, Apple Container verification, Container Desktop integration, and release readiness.
 - [Development](DEVELOPMENT.md): local development commands, tests, smoke checks, and release hygiene.
 - [Contributing](CONTRIBUTING.md): contribution expectations, pull request checklist, issue guidance, and coding standards.
+
+Repository-level license text is in [../LICENSE](../LICENSE), with third-party references and dependency notices in [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
