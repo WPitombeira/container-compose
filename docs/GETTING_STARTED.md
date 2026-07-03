@@ -61,6 +61,13 @@ See support status:
 container-compose compatibility
 ```
 
+Check the installed tool and schema metadata:
+
+```sh
+container-compose version
+container-compose version --format json
+```
+
 Preview Apple Container commands:
 
 ```sh
@@ -131,6 +138,8 @@ container-compose config
 container-compose config --format yaml
 container-compose config --services
 container-compose config --images
+container-compose version
+container-compose version --format json
 container-compose compatibility --format json
 container-compose compatibility --area planner --status preservedDiagnostic
 container-compose plan
@@ -155,6 +164,8 @@ container-compose down --volumes
 ```
 
 ## Plans and Diagnostics
+
+`container-compose version --format json` emits the tool version plus the current plan, execution-report, execution-graph, and runtime-status schema versions.
 
 `container-compose plan` emits a versioned JSON envelope containing:
 

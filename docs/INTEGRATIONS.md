@@ -76,6 +76,7 @@ Use:
 - `makeDesktopSnapshot(_:)` for UI-ready command rows.
 - `dryRun(_:)` and `dryRunDesktopSnapshot(_:)` for planned execution reports without invoking Apple Container.
 - `runtimeStatus()` for availability banners and executable discovery.
+- `ContainerComposeMetadata.currentVersionInfo` for tool and schema compatibility checks.
 - `execute(...)` with injected executors when the caller owns process execution.
 
 ## Integration Principles
@@ -86,3 +87,4 @@ Use:
 - Keep remote include fetching app-owned through the injectable resolver.
 - Do not re-derive container names in the UI. Use the planner's effective names and readiness metadata.
 - Preserve backward-compatible decoding for versioned JSON types whenever adding optional fields.
+- Compare schema versions through `ContainerComposeMetadata.currentVersionInfo` instead of hard-coding values in app code.

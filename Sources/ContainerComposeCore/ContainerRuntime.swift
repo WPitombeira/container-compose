@@ -75,7 +75,7 @@ public struct AppleContainerRuntimeStatus: Codable, Equatable, Sendable {
     public var issues: [AppleContainerRuntimeIssue]
 
     public init(
-        schemaVersion: String = "1.0.0",
+        schemaVersion: String = ContainerComposeMetadata.runtimeStatusSchemaVersion,
         runtime: String = "apple-container",
         executable: String = "container",
         executablePath: String? = nil,

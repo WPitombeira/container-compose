@@ -16,6 +16,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
    - Emits diagnostics for unsupported or partially supported fields.
    - Plans Apple Container commands without executing them.
    - Exposes `ContainerComposeService` as the public app-facing facade for project loading, operation planning, dry-run reports, and injected execution.
+   - Exposes `ContainerComposeMetadata.currentVersionInfo` so CLI users and Container Desktop can inspect tool and schema versions through one public contract.
    - Exposes a versioned `AppleContainerPlan` envelope for CLI JSON output and `container-desktop` integration.
    - Exposes a versioned `AppleContainerExecutionReport` envelope for machine-readable runtime results.
 

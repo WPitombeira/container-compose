@@ -55,6 +55,7 @@ From a directory containing `compose.yaml`:
 
 ```sh
 container-compose config
+container-compose version
 container-compose compatibility
 container-compose compatibility --area planner --status preservedDiagnostic
 container-compose plan
@@ -87,7 +88,7 @@ Container Compose currently supports a pragmatic Compose subset for local macOS 
 - Docker Compose-style ordered file merging, including `!reset`, `!override`, unique resource merge keys, and duplicate-free sequences.
 - Apple Container command planning for build, pull, push, up, run, create, down, start, stop, restart, kill, rm, exec, cp, logs, ps, stats, images, config, compatibility, and doctor workflows.
 - Structured diagnostics for Compose fields that are preserved but not yet mapped to Apple Container.
-- Versioned JSON plan and execution-report envelopes for app integrations.
+- Versioned JSON plan, execution-report, runtime-status, execution-graph, and tool metadata envelopes for app integrations.
 
 The detailed compatibility strategy is tracked in [docs/COMPOSE_PARITY.md](docs/COMPOSE_PARITY.md).
 

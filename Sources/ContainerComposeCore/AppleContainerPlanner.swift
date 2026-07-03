@@ -179,7 +179,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
     public init(
         nodes: [AppleContainerExecutionNode],
         edges: [AppleContainerExecutionEdge],
-        schemaVersion: String = "1.1.0"
+        schemaVersion: String = ContainerComposeMetadata.executionGraphSchemaVersion
     ) {
         self.schemaVersion = schemaVersion
         self.nodes = nodes
@@ -267,7 +267,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
             )
         }
         self.edges = edges
-        schemaVersion = "1.1.0"
+        schemaVersion = ContainerComposeMetadata.executionGraphSchemaVersion
     }
 
     private static func commandIndexByService(_ commands: [PlannedCommand]) -> [String: Int] {
@@ -376,7 +376,7 @@ public struct AppleContainerPlan: Codable, Equatable, Sendable {
         runtime: String = "apple-container",
         executable: String = "container",
         runtimeStatus: AppleContainerRuntimeStatus? = nil,
-        schemaVersion: String = "1.8.0",
+        schemaVersion: String = ContainerComposeMetadata.planSchemaVersion,
         selectedServices: [String] = [],
         emitReadinessChecks: Bool = false,
         executionGraph: AppleContainerExecutionGraph? = nil

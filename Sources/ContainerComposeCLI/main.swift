@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Plan.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Ps.self, Stats.self],
+        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Ps.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -200,6 +200,35 @@ struct Plan: ParsableCommand {
     func run() throws {
         let result = try ContainerComposeService().makePlan(try options.makeRequest(operation: .plan, detach: !foreground))
         printJSON(result.plan)
+    }
+}
+
+struct Version: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Print Container Compose version and schema metadata.")
+
+    @Option(name: .customLong("format"), help: "Output format. Values: text, json, yaml.")
+    var format = "text"
+
+    func run() throws {
+        let info = ContainerComposeMetadata.currentVersionInfo
+        switch format.lowercased() {
+        case "text":
+            print("\(info.name) \(info.version)")
+            print("package: \(info.packageName)")
+            print("command: \(info.commandName)")
+            print("runtime target: \(info.runtimeTarget)")
+            print("container desktop integration: \(info.containerDesktopIntegration)")
+            print("schemas:")
+            print("  plan: \(info.schemas.plan)")
+            print("  execution report: \(info.schemas.executionReport)")
+            print("  execution graph: \(info.schemas.executionGraph)")
+            print("  runtime status: \(info.schemas.runtimeStatus)")
+        case "json", "yaml":
+            let renderFormat = try ComposeConfigRenderer.parseFormat(format)
+            print(try ComposeConfigRenderer().render(info, format: renderFormat), terminator: "")
+        default:
+            throw ValidationError("Unsupported version format '\(format)'. Expected one of: text, json, yaml.")
+        }
     }
 }
 

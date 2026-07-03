@@ -181,6 +181,8 @@ The default readiness checker uses `container inspect`; the app can inject its o
 
 Use `ContainerComposeService.runtimeStatus()` or an app-owned `AppleContainerRuntimeStatus` before execution when the UI needs a hard-stop banner for missing Apple Container support. The status is additive on `ContainerComposePlanRequest`, `AppleContainerPlan`, `AppleContainerExecutionReport`, and `ContainerComposeDesktopSnapshot`. Missing `container` resolves to `availability == .unavailable` with issue code `containerCLIUnavailable`; version probe failures are `unknown` warnings so a present runtime is not blocked only because its version output changed.
 
+Use `ContainerComposeMetadata.currentVersionInfo` when the app needs to compare Container Compose tool metadata or schema versions before decoding persisted plans, reports, graphs, or runtime-status payloads. This keeps Container Desktop aligned with the same version contract used by `container-compose version --format json`.
+
 Execution failures keep the compatibility `error` string, but also expose `PlannedCommandExecution.errorCode` for app logic. Current codes include `containerCLIUnavailable`, `processFailed`, `nonZeroExit`, `readinessFailed`, `readinessTimedOut`, `readinessCancelled`, `executionCancelled`, and `skippedPreviousFailure`.
 
 When a planned command contains `generatedFiles`, the default execution runner writes those files before invoking the command and removes them after the command finishes. This is used for Compose `build.dockerfile_inline`, where previews show the deterministic generated Dockerfile path and runtime execution materializes the file for Apple `container build --file`.
@@ -191,6 +193,7 @@ Remote includes stay behind the app-owned resolver. `ComposeLoader.RemoteInclude
 
 - `ComposeProject`: normalized Compose model for outline/detail views.
 - `ComposeProject.remoteIncludes`: remote include provenance and app-supplied cache metadata.
+- `ContainerComposeVersionInfo`: tool, command, package, runtime target, integration surface, and schema-version metadata.
 - `AppleContainerPlan`: schema-versioned command plan for previews and persistence.
 - `AppleContainerRuntimeStatus`: optional runtime availability, resolved executable path, version text, and typed issue codes for app banners.
 - `PlannedCommand.generatedFiles`: app-materialized files such as inline Dockerfiles needed before running a planned Apple Container command.
