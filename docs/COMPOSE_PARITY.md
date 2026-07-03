@@ -58,7 +58,7 @@ New work should prefer `Preserved diagnostic` before `Mapped` unless the Apple C
 Container Desktop should treat `ContainerComposeCore` as the Compose engine:
 
 - Use `ContainerComposeService` for loading, planning, dry-run reports, runtime status, and desktop snapshots.
-- Use `ComposeCompatibilityMatrix.current` or `container-compose compatibility --format json` when the UI needs a support matrix for mapped, preserved diagnostic, rejected diagnostic, and unsupported Compose fields.
+- Use `ComposeCompatibilityMatrix.current` or `container-compose compatibility --format json` when the UI needs a support matrix for mapped, preserved diagnostic, rejected diagnostic, and unsupported Compose fields. The CLI can filter by support tier with `--status` and by implementation surface with `--area loader|planner|runtime|integration`.
 - Render `ComposeProject` as the source of truth for the active model.
 - Render `AppleContainerPlan.commands` as the source of truth for executable previews.
 - Render `AppleContainerPlan.executionGraph` for service ordering and readiness requirements.

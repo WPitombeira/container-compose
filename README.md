@@ -56,6 +56,7 @@ From a directory containing `compose.yaml`:
 ```sh
 container-compose config
 container-compose compatibility
+container-compose compatibility --area planner --status preservedDiagnostic
 container-compose plan
 container-compose up --detach
 container-compose logs --follow web

@@ -242,9 +242,12 @@ struct Compatibility: ParsableCommand {
     @Option(name: .customLong("status"), help: "Filter by status: mapped, preservedDiagnostic, rejectedDiagnostic, unsupported.")
     var status: String?
 
+    @Option(name: .customLong("area"), help: "Filter by area: loader, planner, runtime, integration.")
+    var area: String?
+
     func run() throws {
         let matrix = ComposeCompatibilityMatrix.current
-        let entries = matrix.entries(with: try parsedStatus())
+        let entries = matrix.entries(with: try parsedStatus(), area: try parsedArea())
         switch format.lowercased() {
         case "text":
             printText(entries)
@@ -267,6 +270,18 @@ struct Compatibility: ParsableCommand {
             return candidate
         }
         throw ValidationError("Unsupported compatibility status '\(status)'.")
+    }
+
+    private func parsedArea() throws -> ComposeCompatibilityArea? {
+        guard let area else { return nil }
+        if let exact = ComposeCompatibilityArea(rawValue: area) {
+            return exact
+        }
+        let normalized = area.lowercased().replacingOccurrences(of: "-", with: "")
+        for candidate in ComposeCompatibilityArea.allCases where candidate.rawValue.lowercased() == normalized {
+            return candidate
+        }
+        throw ValidationError("Unsupported compatibility area '\(area)'.")
     }
 
     private func printText(_ entries: [ComposeCompatibilityEntry]) {

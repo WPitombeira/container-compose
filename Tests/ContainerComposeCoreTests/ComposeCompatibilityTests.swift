@@ -55,6 +55,23 @@ final class ComposeCompatibilityTests: XCTestCase {
         XCTAssertEqual(matrix.entries(with: nil), matrix.entries)
     }
 
+    func testCompatibilityMatrixFiltersByAreaAndStatusTogether() {
+        let matrix = ComposeCompatibilityMatrix.current
+
+        let loaderEntries = matrix.entries(area: .loader)
+        let preservedPlannerEntries = matrix.entries(with: .preservedDiagnostic, area: .planner)
+
+        XCTAssertFalse(loaderEntries.isEmpty)
+        XCTAssertTrue(loaderEntries.allSatisfy { $0.area == .loader })
+        XCTAssertFalse(preservedPlannerEntries.isEmpty)
+        XCTAssertTrue(preservedPlannerEntries.allSatisfy {
+            $0.status == .preservedDiagnostic && $0.area == .planner
+        })
+        XCTAssertTrue(preservedPlannerEntries.contains {
+            $0.composePath == "services.*.deploy.resources.reservations.generic_resources"
+        })
+    }
+
     func testCompatibilityMatrixRendersAsJSONAndYAML() throws {
         let matrix = ComposeCompatibilityMatrix.current
 

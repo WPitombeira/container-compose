@@ -166,8 +166,13 @@ public struct ComposeCompatibilityMatrix: Codable, Equatable, Sendable {
         }
     )
 
-    public func entries(with status: ComposeCompatibilityStatus? = nil) -> [ComposeCompatibilityEntry] {
-        guard let status else { return entries }
-        return entries.filter { $0.status == status }
+    public func entries(
+        with status: ComposeCompatibilityStatus? = nil,
+        area: ComposeCompatibilityArea? = nil
+    ) -> [ComposeCompatibilityEntry] {
+        entries.filter { entry in
+            (status == nil || entry.status == status)
+                && (area == nil || entry.area == area)
+        }
     }
 }

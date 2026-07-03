@@ -132,6 +132,7 @@ container-compose config --format yaml
 container-compose config --services
 container-compose config --images
 container-compose compatibility --format json
+container-compose compatibility --area planner --status preservedDiagnostic
 container-compose plan
 container-compose up --detach web
 container-compose run --rm web sh
