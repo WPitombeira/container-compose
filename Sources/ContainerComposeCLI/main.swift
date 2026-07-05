@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -48,6 +48,7 @@ struct ComposeOptions: ParsableArguments {
         signal: String? = nil,
         execCommand: [String] = [],
         execOptions: AppleContainerExecOptions = .init(),
+        attachOptions: AppleContainerAttachOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -85,6 +86,7 @@ struct ComposeOptions: ParsableArguments {
             signal: signal,
             execCommand: execCommand,
             execOptions: execOptions,
+            attachOptions: attachOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -735,6 +737,45 @@ struct Unpause: ParsableCommand {
 
     func run() throws {
         let result = try ContainerComposeService().makePlan(try options.makeRequest(operation: .unpause, services: services))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
+    }
+}
+
+struct Attach: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose attach intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Option(name: .customLong("detach-keys"), help: "Override the key sequence for detaching from a container.")
+    var detachKeys: String?
+
+    @Option(name: .customLong("index"), help: "Replica index for the service container.")
+    var index = 1
+
+    @Flag(name: .customLong("no-stdin"), help: "Do not attach STDIN.")
+    var noStdin = false
+
+    @Option(name: .customLong("sig-proxy"), help: "Proxy received signals to the process. Defaults to true.")
+    var sigProxy = true
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Service name to attach to.")
+    var service: String
+
+    func run() throws {
+        let attachOptions = AppleContainerAttachOptions(
+            detachKeys: detachKeys,
+            replicaIndex: index,
+            attachStdin: !noStdin,
+            signalProxy: sigProxy
+        )
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .attach,
+            services: [service],
+            attachOptions: attachOptions
+        ))
         try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }

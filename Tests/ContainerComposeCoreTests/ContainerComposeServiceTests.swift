@@ -1437,6 +1437,33 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "unpause")
     }
 
+    func testFacadePlansAttachForSelectedServiceWithDiagnostic() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+          db:
+            image: postgres
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .attach,
+            projectDirectory: workdir.path,
+            projectName: "demo",
+            services: ["web"],
+            attachOptions: .init(attachStdin: false)
+        ))
+
+        XCTAssertEqual(result.plan.operation, "attach")
+        XCTAssertEqual(result.plan.selectedServices, ["web"])
+        XCTAssertEqual(result.plan.commands.map(\.action), [.attachService])
+        XCTAssertEqual(result.plan.commands.first?.arguments, ["attach", "--no-stdin", "demo_web_1"])
+        XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "attach")
+    }
+
     func testFacadePlansRemoveWithStopForSelectedServices() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

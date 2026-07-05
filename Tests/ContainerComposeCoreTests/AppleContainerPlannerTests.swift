@@ -2673,6 +2673,53 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansAttachCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx"),
+                ComposeService(name: "db", image: "postgres")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planAttach(
+            project: project,
+            service: "web",
+            options: .init(
+                detachKeys: "ctrl-c",
+                replicaIndex: 2,
+                attachStdin: false,
+                signalProxy: false
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .attachService)
+        XCTAssertEqual(commands[0].service, "web")
+        XCTAssertEqual(commands[0].arguments, [
+            "attach",
+            "--detach-keys", "ctrl-c",
+            "--index", "2",
+            "--no-stdin",
+            "--sig-proxy=false",
+            "demo_web_2"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "attach"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "attach.detach_keys"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "attach.sig_proxy"
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

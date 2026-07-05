@@ -6,7 +6,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 1. `ContainerComposeCLI`
    - ArgumentParser executable.
-   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `images`, `stop`, `restart`, `kill`, `rm`, `exec`, `cp`, `logs`, `ps`, and `stats`.
+   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `images`, `stop`, `restart`, `kill`, `pause`, `unpause`, `attach`, `rm`, `exec`, `cp`, `logs`, `ps`, `top`, and `stats`.
    - Executes `container` only after showing or building a command plan.
    - Ships as a SwiftPM executable that can be installed to a user-selected `PREFIX/bin`.
 
@@ -22,7 +22,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 3. Apple Container runtime
    - Invoked as `container <arguments>`.
-   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`.
+   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`. Pause, unpause, and attach are diagnostic-only until Apple Container behavior is verified.
 
 ## Compose Compatibility Strategy
 
@@ -111,6 +111,7 @@ MVP behavior:
 - Plan `exec` as a single service-scoped `container exec` command with Compose's default interactive and TTY behavior. Map detach, environment values, env files, user, workdir, and replica index where Apple Container has direct flags; keep Docker Compose `--privileged` as an explicit diagnostic because Apple Container exec does not expose an equivalent.
 - Plan `cp` as a single `container copy` command by rewriting exactly one `SERVICE:PATH` endpoint to the effective Apple container name. Map Compose `--index` to generated replica names and emit diagnostics for `--archive`, `--follow-link`, and `--all`, which Apple Container copy does not expose.
 - Accept `pause` and `unpause` service targeting and emit service-scoped diagnostic planned actions. The execution runner treats those actions as unsupported before invoking Apple Container until real pause primitives are verified.
+- Accept `attach SERVICE` and preserve Docker Compose attach options for service index, stdin attachment, signal proxying, and detach keys. The execution runner treats attach actions as unsupported before invoking Apple Container until interactive stream semantics are verified.
 - Resolve `port` from the normalized Compose model instead of invoking Apple Container. `ComposePortResolver` maps `SERVICE PRIVATE_PORT` plus protocol to declared published host endpoints and emits an index diagnostic because static model resolution does not inspect runtime replica state.
 - Plan `top` as one `container exec <service-container> ps` command per selected service. Keep a command diagnostic because Docker Compose reports engine-side process information while Apple Container currently exposes a useful in-container process fallback through exec.
 - Plan `stats` as project-scoped `container stats` calls using effective service container names, with `--no-stream` available for snapshot-style UI and CLI output.

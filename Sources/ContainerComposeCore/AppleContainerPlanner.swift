@@ -16,6 +16,7 @@ public enum PlanAction: String, Codable, Sendable {
     case killService
     case pauseService
     case unpauseService
+    case attachService
     case execService
     case copyService
     case logsService
@@ -306,7 +307,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -315,7 +316,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -324,7 +325,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -462,6 +463,25 @@ public struct AppleContainerExecOptions: Codable, Equatable, Sendable {
         self.tty = tty
         self.replicaIndex = replicaIndex
         self.privileged = privileged
+    }
+}
+
+public struct AppleContainerAttachOptions: Codable, Equatable, Sendable {
+    public var detachKeys: String?
+    public var replicaIndex: Int
+    public var attachStdin: Bool
+    public var signalProxy: Bool
+
+    public init(
+        detachKeys: String? = nil,
+        replicaIndex: Int = 1,
+        attachStdin: Bool = true,
+        signalProxy: Bool = true
+    ) {
+        self.detachKeys = detachKeys
+        self.replicaIndex = replicaIndex
+        self.attachStdin = attachStdin
+        self.signalProxy = signalProxy
     }
 }
 
@@ -957,6 +977,92 @@ public struct AppleContainerPlanner: Sendable {
                 ]
             )
         }
+    }
+
+    public func planAttach(
+        project: ComposeProject,
+        service serviceName: String?,
+        options: AppleContainerAttachOptions = .init()
+    ) -> [PlannedCommand] {
+        guard let serviceName, !serviceName.isEmpty else {
+            return [
+                PlannedCommand(
+                    action: .attachService,
+                    arguments: ["attach"],
+                    diagnostics: [
+                        .init(
+                            severity: .error,
+                            path: "attach.service",
+                            message: "Attach planning requires a service name."
+                        )
+                    ]
+                )
+            ]
+        }
+
+        guard let service = selectedOrderedServices(project.services, selectedServices: [serviceName]).first else {
+            return []
+        }
+
+        var arguments = ["attach"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "attach",
+                message: "Docker Compose attach connects local stdin, stdout, and stderr to a running service container, but Apple Container attach support is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if let detachKeys = options.detachKeys, !detachKeys.isEmpty {
+            arguments.append(contentsOf: ["--detach-keys", detachKeys])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "attach.detach_keys",
+                message: "Docker Compose --detach-keys is preserved for attach intent, but Apple Container detach-key behavior is unverified."
+            ))
+        }
+
+        let replicaIndex = max(options.replicaIndex, 1)
+        if options.replicaIndex < 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "attach.index",
+                message: "Replica index must be at least 1; using index 1 for Apple Container command planning."
+            ))
+        }
+
+        if service.containerName != nil, replicaIndex != 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "attach.index",
+                message: "Replica index is ignored for services that declare container_name."
+            ))
+        } else if replicaIndex != 1 {
+            arguments.append(contentsOf: ["--index", String(replicaIndex)])
+        }
+
+        if !options.attachStdin {
+            arguments.append("--no-stdin")
+        }
+
+        if !options.signalProxy {
+            arguments.append("--sig-proxy=false")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "attach.sig_proxy",
+                message: "Docker Compose --sig-proxy=false is preserved for attach intent, but Apple Container signal proxy behavior is unverified."
+            ))
+        }
+
+        arguments.append(containerName(project: project.name, service: service, replicaIndex: replicaIndex))
+        return [
+            PlannedCommand(
+                action: .attachService,
+                service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
     }
 
     public func planRemove(
