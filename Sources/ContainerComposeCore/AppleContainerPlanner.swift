@@ -18,6 +18,7 @@ public enum PlanAction: String, Codable, Sendable {
     case unpauseService
     case attachService
     case waitService
+    case scaleService
     case execService
     case copyService
     case logsService
@@ -308,7 +309,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -317,7 +318,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -326,7 +327,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -491,6 +492,14 @@ public struct AppleContainerWaitOptions: Codable, Equatable, Sendable {
 
     public init(downProject: Bool = false) {
         self.downProject = downProject
+    }
+}
+
+public struct AppleContainerScaleOptions: Codable, Equatable, Sendable {
+    public var noDependencies: Bool
+
+    public init(noDependencies: Bool = false) {
+        self.noDependencies = noDependencies
     }
 }
 
@@ -1101,6 +1110,68 @@ public struct AppleContainerPlanner: Sendable {
             arguments.append(containerName(project: project.name, service: service))
             return PlannedCommand(
                 action: .waitService,
+                service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        }
+    }
+
+    public func planScale(
+        project: ComposeProject,
+        targets: [String: Int],
+        services selectedServices: [String] = [],
+        options: AppleContainerScaleOptions = .init()
+    ) -> [PlannedCommand] {
+        guard !targets.isEmpty else {
+            return [
+                PlannedCommand(
+                    action: .scaleService,
+                    arguments: ["scale"],
+                    diagnostics: [
+                        .init(
+                            severity: .error,
+                            path: "scale",
+                            message: "Scale planning requires at least one SERVICE=REPLICAS assignment."
+                        )
+                    ]
+                )
+            ]
+        }
+
+        let selected = selectedServices.isEmpty ? Array(targets.keys) : selectedServices
+        return selectedOrderedServices(project.services, selectedServices: selected).compactMap { service in
+            guard let replicas = targets[service.name] else { return nil }
+
+            var arguments = ["scale"]
+            var diagnostics: [ComposeDiagnostic] = [
+                .init(
+                    severity: .warning,
+                    path: "scale",
+                    message: "Docker Compose scale changes service replica counts, but Apple Container replica orchestration is unavailable or unverified; this planned action is not executable yet."
+                )
+            ]
+
+            if options.noDependencies {
+                arguments.append("--no-deps")
+                diagnostics.append(.init(
+                    severity: .warning,
+                    path: "scale.no_deps",
+                    message: "Docker Compose --no-deps is preserved for scale intent, but Container Compose does not start linked services while scale support is diagnostic-only."
+                ))
+            }
+
+            if service.containerName != nil, replicas > 1 {
+                diagnostics.append(.init(
+                    severity: .warning,
+                    path: "services.\(service.name).container_name",
+                    message: "Services that declare container_name cannot be safely scaled beyond one replica because replica containers would need unique names."
+                ))
+            }
+
+            arguments.append("\(service.name)=\(replicas)")
+            return PlannedCommand(
+                action: .scaleService,
                 service: service.name,
                 arguments: arguments,
                 diagnostics: diagnostics

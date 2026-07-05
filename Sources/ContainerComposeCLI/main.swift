@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -50,6 +50,8 @@ struct ComposeOptions: ParsableArguments {
         execOptions: AppleContainerExecOptions = .init(),
         attachOptions: AppleContainerAttachOptions = .init(),
         waitOptions: AppleContainerWaitOptions = .init(),
+        scaleTargets: [String: Int] = [:],
+        scaleOptions: AppleContainerScaleOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -89,6 +91,8 @@ struct ComposeOptions: ParsableArguments {
             execOptions: execOptions,
             attachOptions: attachOptions,
             waitOptions: waitOptions,
+            scaleTargets: scaleTargets,
+            scaleOptions: scaleOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -803,6 +807,69 @@ struct Wait: ParsableCommand {
             waitOptions: .init(downProject: downProject)
         ))
         try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
+    }
+}
+
+struct Scale: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose scale intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("no-deps"), help: "Do not start linked services while preserving Docker Compose scale intent.")
+    var noDependencies = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Service scale assignments like web=2.")
+    var assignments: [String] = []
+
+    func run() throws {
+        let parsed = try parseScaleAssignments(assignments)
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .scale,
+            services: parsed.services,
+            scaleTargets: parsed.targets,
+            scaleOptions: .init(noDependencies: noDependencies)
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
+    }
+
+    private func parseScaleAssignments(_ assignments: [String]) throws -> (services: [String], targets: [String: Int]) {
+        guard !assignments.isEmpty else {
+            throw ValidationError("scale requires at least one SERVICE=REPLICAS assignment")
+        }
+
+        var services: [String] = []
+        var targets: [String: Int] = [:]
+
+        for assignment in assignments {
+            let parts = assignment.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2 else {
+                throw ValidationError("scale assignment '\(assignment)' must use SERVICE=REPLICAS syntax")
+            }
+
+            let service = String(parts[0]).trimmingCharacters(in: .whitespacesAndNewlines)
+            let replicaValue = String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !service.isEmpty else {
+                throw ValidationError("scale assignment '\(assignment)' is missing a service name")
+            }
+            guard !replicaValue.isEmpty else {
+                throw ValidationError("scale assignment '\(assignment)' is missing a replica count")
+            }
+            guard targets[service] == nil else {
+                throw ValidationError("scale assignment for service '\(service)' was specified more than once")
+            }
+            guard let replicas = Int(replicaValue), replicas >= 0 else {
+                throw ValidationError("scale assignment '\(assignment)' must use a non-negative integer replica count")
+            }
+
+            services.append(service)
+            targets[service] = replicas
+        }
+
+        return (services, targets)
     }
 }
 

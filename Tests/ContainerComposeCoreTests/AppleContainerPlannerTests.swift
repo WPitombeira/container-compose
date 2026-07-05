@@ -2758,6 +2758,67 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansScaleCommandsWithUnsupportedRuntimeDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx", dependsOn: ["db"]),
+                ComposeService(name: "db", image: "postgres", containerName: "database")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planScale(
+            project: project,
+            targets: ["db": 2, "web": 3],
+            services: ["db", "web"],
+            options: .init(noDependencies: true)
+        )
+
+        XCTAssertEqual(commands.count, 2)
+        XCTAssertEqual(commands[0].action, .scaleService)
+        XCTAssertEqual(commands[0].service, "db")
+        XCTAssertEqual(commands[0].arguments, ["scale", "--no-deps", "db=2"])
+        XCTAssertEqual(commands[1].action, .scaleService)
+        XCTAssertEqual(commands[1].service, "web")
+        XCTAssertEqual(commands[1].arguments, ["scale", "--no-deps", "web=3"])
+        XCTAssertTrue(commands.allSatisfy { command in
+            command.diagnostics.contains {
+                $0.severity == .warning
+                    && $0.path == "scale"
+                    && $0.message.contains("not executable yet")
+            }
+        })
+        XCTAssertTrue(commands.allSatisfy { command in
+            command.diagnostics.contains {
+                $0.severity == .warning
+                    && $0.path == "scale.no_deps"
+            }
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "services.db.container_name"
+        })
+    }
+
+    func testPlansScaleWithoutTargetsAsValidationDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planScale(project: project, targets: [:])
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .scaleService)
+        XCTAssertEqual(commands[0].arguments, ["scale"])
+        XCTAssertEqual(commands[0].diagnostics.first?.severity, .error)
+        XCTAssertEqual(commands[0].diagnostics.first?.path, "scale")
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",
