@@ -219,6 +219,29 @@ final class EnvironmentResolverTests: XCTestCase {
         XCTAssertNil(resolver.interpolationEnvironment["DOT_ONLY"])
     }
 
+    func testInterpolationVariablesCollectNamesAndDefaults() {
+        let variables = EnvironmentResolver.interpolationVariables(in: """
+        services:
+          web:
+            image: "${IMAGE:-nginx:${TAG:-latest}}"
+            command: "$COMMAND ${REQUIRED?must set} $${ESCAPED}"
+          worker:
+            image: "${IMAGE}"
+            environment:
+              ALT: "${ENABLED:+yes}"
+              FALLBACK: "${FALLBACK-default}"
+        """)
+
+        XCTAssertEqual(variables, [
+            ComposeInterpolationVariable(name: "COMMAND"),
+            ComposeInterpolationVariable(name: "ENABLED"),
+            ComposeInterpolationVariable(name: "FALLBACK", defaultValue: "default"),
+            ComposeInterpolationVariable(name: "IMAGE", defaultValue: "nginx:${TAG:-latest}"),
+            ComposeInterpolationVariable(name: "REQUIRED"),
+            ComposeInterpolationVariable(name: "TAG", defaultValue: "latest")
+        ])
+    }
+
     private func makeTemporaryWorkdir() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("container-compose-resolver-tests")

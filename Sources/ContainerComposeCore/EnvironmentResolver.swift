@@ -37,6 +37,12 @@ public struct EnvironmentResolver: Sendable {
         envFileValues.merging(processEnvironment) { _, processValue in processValue }
     }
 
+    public static func interpolationVariables(in text: String) -> [ComposeInterpolationVariable] {
+        collectInterpolationVariables(in: text)
+            .values
+            .sorted { $0.name < $1.name }
+    }
+
     public func resolveWithDiagnostics(_ text: String) throws -> EnvironmentResolution {
         let chars = Array(text)
         guard !chars.isEmpty else {
@@ -67,7 +73,7 @@ public struct EnvironmentResolver: Sendable {
             }
 
             if chars[index + 1] == "{" {
-                guard let closeIndex = closingBraceIndex(in: chars, openingBraceIndex: index + 1) else {
+                guard let closeIndex = Self.closingBraceIndex(in: chars, openingBraceIndex: index + 1) else {
                     output.append("${")
                     index += 2
                     continue
@@ -85,7 +91,7 @@ public struct EnvironmentResolver: Sendable {
             }
 
             let nameStart = index + 1
-            guard let nameEnd = variableNameEnd(in: chars, startingAt: nameStart) else {
+            guard let nameEnd = Self.variableNameEnd(in: chars, startingAt: nameStart) else {
                 output.append(chars[index])
                 index += 1
                 continue
@@ -104,7 +110,7 @@ public struct EnvironmentResolver: Sendable {
     }
 
     private func resolveToken(_ token: String, diagnostics: inout [ComposeDiagnostic]) throws -> String? {
-        let expression = parseExpression(token)
+        let expression = Self.parseExpression(token)
         guard let expression else { return nil }
 
         let value = value(for: expression.name)
@@ -151,7 +157,7 @@ public struct EnvironmentResolver: Sendable {
         }
     }
 
-    private func parseExpression(_ token: String) -> Expression? {
+    private static func parseExpression(_ token: String) -> Expression? {
         if let range = token.range(of: ":+") {
             let name = String(token[..<range.lowerBound])
             guard Self.isValidVariableName(name) else { return nil }
@@ -217,7 +223,7 @@ public struct EnvironmentResolver: Sendable {
         return "Required environment variable \(name) is not set: \(message)"
     }
 
-    private func closingBraceIndex(in chars: [Character], openingBraceIndex: Int) -> Int? {
+    private static func closingBraceIndex(in chars: [Character], openingBraceIndex: Int) -> Int? {
         var depth = 1
         var current = openingBraceIndex + 1
         while current < chars.count {
@@ -237,7 +243,7 @@ public struct EnvironmentResolver: Sendable {
         return nil
     }
 
-    private func variableNameEnd(in chars: [Character], startingAt startIndex: Int) -> Int? {
+    private static func variableNameEnd(in chars: [Character], startingAt startIndex: Int) -> Int? {
         guard startIndex < chars.count else { return nil }
         let first = chars[startIndex]
         guard Self.isValidVariableFirstCharacter(first) else { return nil }
@@ -303,6 +309,81 @@ public struct EnvironmentResolver: Sendable {
         return normalized
     }
 
+    private static func collectInterpolationVariables(in text: String) -> [String: ComposeInterpolationVariable] {
+        let chars = Array(text)
+        guard !chars.isEmpty else { return [:] }
+
+        var variables: [String: ComposeInterpolationVariable] = [:]
+        var index = 0
+
+        while index < chars.count {
+            guard chars[index] == "$" else {
+                index += 1
+                continue
+            }
+
+            if index + 1 >= chars.count {
+                index += 1
+                continue
+            }
+
+            if chars[index + 1] == "$" {
+                index += 2
+                continue
+            }
+
+            if chars[index + 1] == "{" {
+                guard let closeIndex = closingBraceIndex(in: chars, openingBraceIndex: index + 1) else {
+                    index += 2
+                    continue
+                }
+
+                let token = String(chars[(index + 2)..<closeIndex])
+                if let expression = parseExpression(token) {
+                    merge(
+                        .init(
+                            name: expression.name,
+                            defaultValue: expression.defaultValueForVariableProjection
+                        ),
+                        into: &variables
+                    )
+                    if let defaultValue = expression.defaultValueForVariableProjection {
+                        for nested in collectInterpolationVariables(in: defaultValue).values {
+                            merge(nested, into: &variables)
+                        }
+                    }
+                }
+                index = closeIndex + 1
+                continue
+            }
+
+            let nameStart = index + 1
+            guard let nameEnd = variableNameEnd(in: chars, startingAt: nameStart) else {
+                index += 1
+                continue
+            }
+
+            let name = String(chars[nameStart..<nameEnd])
+            merge(.init(name: name), into: &variables)
+            index = nameEnd
+        }
+
+        return variables
+    }
+
+    private static func merge(
+        _ variable: ComposeInterpolationVariable,
+        into variables: inout [String: ComposeInterpolationVariable]
+    ) {
+        guard let existing = variables[variable.name] else {
+            variables[variable.name] = variable
+            return
+        }
+        if existing.defaultValue == nil, variable.defaultValue != nil {
+            variables[variable.name] = variable
+        }
+    }
+
     private enum Operator {
         case none
         case colonDash
@@ -317,6 +398,25 @@ public struct EnvironmentResolver: Sendable {
         let name: String
         let operatorKind: Operator
         let value: String
+
+        var defaultValueForVariableProjection: String? {
+            switch operatorKind {
+            case .colonDash, .dash:
+                return value
+            case .none, .colonPlus, .plus, .colonQuestion, .question:
+                return nil
+            }
+        }
+    }
+}
+
+public struct ComposeInterpolationVariable: Codable, Equatable, Sendable {
+    public var name: String
+    public var defaultValue: String?
+
+    public init(name: String, defaultValue: String? = nil) {
+        self.name = name
+        self.defaultValue = defaultValue
     }
 }
 

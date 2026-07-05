@@ -1,0 +1,7 @@
+name: container-compose-variables
+
+services:
+  web:
+    image: "${WEB_IMAGE:-nginx}:${WEB_TAG:-alpine}"
+    environment:
+      FEATURE_FLAG: "${FEATURE_FLAG}"

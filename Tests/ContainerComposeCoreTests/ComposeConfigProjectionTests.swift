@@ -58,6 +58,27 @@ final class ComposeConfigProjectionTests: XCTestCase {
         )
     }
 
+    func testProjectsInterpolationVariablesDeterministically() {
+        let project = makeProject()
+
+        XCTAssertEqual(
+            ComposeConfigProjection.values(
+                for: .variables,
+                in: project,
+                interpolationVariables: [
+                    ComposeInterpolationVariable(name: "TAG", defaultValue: "latest"),
+                    ComposeInterpolationVariable(name: "IMAGE"),
+                    ComposeInterpolationVariable(name: "EMPTY", defaultValue: "")
+                ]
+            ),
+            [
+                "EMPTY=",
+                "IMAGE=",
+                "TAG=latest"
+            ]
+        )
+    }
+
     private func makeProject() -> ComposeProject {
         ComposeProject(
             name: "demo",

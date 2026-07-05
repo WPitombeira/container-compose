@@ -153,6 +153,7 @@ struct Config: ParsableCommand {
         try renderOptions.render(
             project: project,
             interpolationEnvironment: interpolationEnvironment(for: project, request: request),
+            interpolationVariables: try interpolationVariables(for: project, request: request),
             commandName: "config"
         )
     }
@@ -170,6 +171,7 @@ struct Convert: ParsableCommand {
         try renderOptions.render(
             project: project,
             interpolationEnvironment: interpolationEnvironment(for: project, request: request),
+            interpolationVariables: try interpolationVariables(for: project, request: request),
             commandName: "convert"
         )
     }
@@ -188,6 +190,86 @@ private func interpolationEnvironment(
         environment: request.environment,
         envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles
     ).interpolationEnvironment
+}
+
+private func interpolationVariables(
+    for project: ComposeProject,
+    request: ContainerComposePlanRequest
+) throws -> [ComposeInterpolationVariable] {
+    var variablesByName: [String: ComposeInterpolationVariable] = [:]
+    for yaml in try interpolationVariableYAMLDocuments(for: project, request: request) {
+        for variable in EnvironmentResolver.interpolationVariables(in: yaml) {
+            merge(variable, into: &variablesByName)
+        }
+    }
+    return variablesByName.values.sorted { $0.name < $1.name }
+}
+
+private func interpolationVariableYAMLDocuments(
+    for project: ComposeProject,
+    request: ContainerComposePlanRequest
+) throws -> [String] {
+    if !request.composeSources.isEmpty {
+        return try request.composeSources.map { source in
+            if let yaml = source.yaml {
+                return yaml
+            }
+            return try String(contentsOfFile: resolvedComposePath(source.path, relativeTo: request.projectDirectory), encoding: .utf8)
+        }
+    }
+
+    if let yaml = request.composeYAML {
+        return [yaml]
+    }
+
+    let paths: [String]
+    if request.files.isEmpty {
+        paths = implicitComposeSourcePaths(from: project.sourcePath)
+    } else {
+        paths = request.files.map { resolvedComposePath($0, relativeTo: request.projectDirectory) }
+    }
+
+    return try paths.map {
+        try String(contentsOfFile: $0, encoding: .utf8)
+    }
+}
+
+private func implicitComposeSourcePaths(from sourcePath: String) -> [String] {
+    let sourceURL = URL(fileURLWithPath: sourcePath).standardizedFileURL
+    let sourceDirectory = sourceURL.deletingLastPathComponent()
+    let overrideNames = [
+        "compose.override.yaml",
+        "compose.override.yml",
+        "docker-compose.override.yaml",
+        "docker-compose.override.yml"
+    ]
+    let overridePaths = overrideNames
+        .map { sourceDirectory.appendingPathComponent($0).path }
+        .filter { FileManager.default.fileExists(atPath: $0) }
+    return [sourceURL.path] + overridePaths
+}
+
+private func resolvedComposePath(_ path: String, relativeTo projectDirectory: String) -> String {
+    if path.hasPrefix("/") {
+        return URL(fileURLWithPath: path).standardizedFileURL.path
+    }
+    return URL(
+        fileURLWithPath: path,
+        relativeTo: URL(fileURLWithPath: projectDirectory, isDirectory: true)
+    ).standardizedFileURL.path
+}
+
+private func merge(
+    _ variable: ComposeInterpolationVariable,
+    into variablesByName: inout [String: ComposeInterpolationVariable]
+) {
+    guard let existing = variablesByName[variable.name] else {
+        variablesByName[variable.name] = variable
+        return
+    }
+    if existing.defaultValue == nil, variable.defaultValue != nil {
+        variablesByName[variable.name] = variable
+    }
 }
 
 struct ConfigRenderOptions: ParsableArguments {
@@ -212,6 +294,9 @@ struct ConfigRenderOptions: ParsableArguments {
     @Flag(name: .customLong("environment"), help: "Print environment used for interpolation.")
     var environment = false
 
+    @Flag(name: .customLong("variables"), help: "Print model variables and default values, one per line.")
+    var variables = false
+
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false
 
@@ -224,6 +309,7 @@ struct ConfigRenderOptions: ParsableArguments {
     func render(
         project: ComposeProject,
         interpolationEnvironment: [String: String] = [:],
+        interpolationVariables: [ComposeInterpolationVariable] = [],
         commandName: String
     ) throws {
         let renderFormat = try ComposeConfigRenderer.parseFormat(format)
@@ -234,7 +320,8 @@ struct ConfigRenderOptions: ParsableArguments {
             let text = ComposeConfigProjection.values(
                 for: projectionMode,
                 in: project,
-                interpolationEnvironment: interpolationEnvironment
+                interpolationEnvironment: interpolationEnvironment,
+                interpolationVariables: interpolationVariables
             ).joined(separator: "\n") + "\n"
             try writeConfigOutput(text)
             return
@@ -251,7 +338,8 @@ struct ConfigRenderOptions: ParsableArguments {
             (networks, .networks),
             (volumes, .volumes),
             (models, .models),
-            (environment, .environment)
+            (environment, .environment),
+            (variables, .variables)
         ]
         let modes = selected.compactMap { isSelected, mode in
             isSelected ? mode : nil
