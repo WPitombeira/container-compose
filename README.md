@@ -67,6 +67,7 @@ container-compose attach web
 container-compose wait web
 container-compose scale web=2
 container-compose commit web example/web:snapshot
+container-compose events --json web
 container-compose top web
 container-compose down
 ```
@@ -93,7 +94,7 @@ Container Compose currently supports a pragmatic Compose subset for local macOS 
 
 - Services, images, builds, environment, env files, labels, ports, volumes, networks, configs, secrets, profiles, includes, and service `extends`.
 - Docker Compose-style ordered file merging, including `!reset`, `!override`, unique resource merge keys, and duplicate-free sequences.
-- Apple Container command planning, model lookups, and diagnostic placeholders for build, pull, push, up, run, create, down, start, stop, restart, kill, pause, unpause, attach, wait, scale, commit, rm, exec, cp, port, logs, ps, top, stats, images, config, convert, compatibility, and doctor workflows.
+- Apple Container command planning, model lookups, and diagnostic placeholders for build, pull, push, up, run, create, down, start, stop, restart, kill, pause, unpause, attach, wait, scale, commit, events, rm, exec, cp, port, logs, ps, top, stats, images, config, convert, compatibility, and doctor workflows.
 - Structured diagnostics for Compose fields that are preserved but not yet mapped to Apple Container.
 - Versioned JSON plan, execution-report, runtime-status, execution-graph, and tool metadata envelopes for app integrations.
 

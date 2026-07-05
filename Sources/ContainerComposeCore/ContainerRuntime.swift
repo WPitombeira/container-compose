@@ -760,7 +760,7 @@ public struct AppleContainerExecutionRunner {
     }
 
     private func unsupportedPlanActionExecution(commandIndex: Int, command: PlannedCommand) -> PlannedCommandExecution? {
-        guard command.action == .delegateService || command.action == .pauseService || command.action == .unpauseService || command.action == .attachService || command.action == .waitService || command.action == .scaleService || command.action == .commitService else { return nil }
+        guard command.action == .delegateService || command.action == .pauseService || command.action == .unpauseService || command.action == .attachService || command.action == .waitService || command.action == .scaleService || command.action == .commitService || command.action == .eventsProject else { return nil }
         return PlannedCommandExecution(
             commandIndex: commandIndex,
             command: command,

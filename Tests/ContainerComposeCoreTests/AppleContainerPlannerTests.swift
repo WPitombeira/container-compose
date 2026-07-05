@@ -2888,6 +2888,55 @@ final class AppleContainerPlannerTests: XCTestCase {
         XCTAssertEqual(commands[0].diagnostics.first?.path, "commit.service")
     }
 
+    func testPlansEventsCommandWithUnsupportedRuntimeDiagnosticAndFilters() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx", dependsOn: ["db"]),
+                ComposeService(name: "db", image: "postgres")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planEvents(
+            project: project,
+            services: ["web"],
+            options: .init(
+                outputJSON: true,
+                since: "2026-07-05T10:00:00Z",
+                until: "2026-07-05T11:00:00Z"
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .eventsProject)
+        XCTAssertNil(commands[0].service)
+        XCTAssertEqual(commands[0].arguments, [
+            "events",
+            "--json",
+            "--since", "2026-07-05T10:00:00Z",
+            "--until", "2026-07-05T11:00:00Z",
+            "web"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "events"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "events.json"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "events.since"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "events.until"
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

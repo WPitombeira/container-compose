@@ -20,6 +20,7 @@ public enum PlanAction: String, Codable, Sendable {
     case waitService
     case scaleService
     case commitService
+    case eventsProject
     case execService
     case copyService
     case logsService
@@ -310,7 +311,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -319,7 +320,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -328,7 +329,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -526,6 +527,22 @@ public struct AppleContainerCommitOptions: Codable, Equatable, Sendable {
         self.replicaIndex = replicaIndex
         self.pause = pause
         self.repository = repository
+    }
+}
+
+public struct AppleContainerEventsOptions: Codable, Equatable, Sendable {
+    public var outputJSON: Bool
+    public var since: String?
+    public var until: String?
+
+    public init(
+        outputJSON: Bool = false,
+        since: String? = nil,
+        until: String? = nil
+    ) {
+        self.outputJSON = outputJSON
+        self.since = since
+        self.until = until
     }
 }
 
@@ -1293,6 +1310,59 @@ public struct AppleContainerPlanner: Sendable {
             PlannedCommand(
                 action: .commitService,
                 service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planEvents(
+        project: ComposeProject,
+        services selectedServices: [String] = [],
+        options: AppleContainerEventsOptions = .init()
+    ) -> [PlannedCommand] {
+        var arguments = ["events"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "events",
+                message: "Docker Compose events streams project container events, but Apple Container project-scoped event streaming is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if options.outputJSON {
+            arguments.append("--json")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "events.json",
+                message: "Docker Compose --json changes event stream formatting; Container Compose preserves this event-output intent instead of treating it as an execution-report format flag."
+            ))
+        }
+
+        if let since = options.since, !since.isEmpty {
+            arguments.append(contentsOf: ["--since", since])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "events.since",
+                message: "Docker Compose --since filters event history; Container Compose preserves the filter until Apple Container event history behavior is verified."
+            ))
+        }
+
+        if let until = options.until, !until.isEmpty {
+            arguments.append(contentsOf: ["--until", until])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "events.until",
+                message: "Docker Compose --until stops event streaming at a timestamp; Container Compose preserves the filter until Apple Container event stream behavior is verified."
+            ))
+        }
+
+        let services = selectedOrderedServices(project.services, selectedServices: selectedServices)
+        arguments.append(contentsOf: services.map(\.name))
+
+        return [
+            PlannedCommand(
+                action: .eventsProject,
                 arguments: arguments,
                 diagnostics: diagnostics
             )

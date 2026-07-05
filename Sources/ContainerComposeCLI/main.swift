@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Events.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -53,6 +53,7 @@ struct ComposeOptions: ParsableArguments {
         scaleTargets: [String: Int] = [:],
         scaleOptions: AppleContainerScaleOptions = .init(),
         commitOptions: AppleContainerCommitOptions = .init(),
+        eventsOptions: AppleContainerEventsOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -95,6 +96,7 @@ struct ComposeOptions: ParsableArguments {
             scaleTargets: scaleTargets,
             scaleOptions: scaleOptions,
             commitOptions: commitOptions,
+            eventsOptions: eventsOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -919,6 +921,37 @@ struct Commit: ParsableCommand {
             commitOptions: commitOptions
         ))
         try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
+    }
+}
+
+struct Events: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose events intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("json"), help: "Preserve Docker Compose JSON event stream formatting intent.")
+    var outputJSON = false
+
+    @Option(name: .customLong("since"), help: "Show events created since this timestamp or relative duration.")
+    var since: String?
+
+    @Option(name: .customLong("until"), help: "Stream events until this timestamp or relative duration.")
+    var until: String?
+
+    @Argument(help: "Optional service names to watch.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .events,
+            services: services,
+            eventsOptions: .init(
+                outputJSON: outputJSON,
+                since: since,
+                until: until
+            )
+        ))
+        try execute(result.plan, dryRun: true, json: false, enforceReadiness: true)
     }
 }
 
