@@ -1578,6 +1578,37 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "events")
     }
 
+    func testFacadePlansProjectListWithoutComposeFileDiscovery() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .ls,
+            projectDirectory: workdir.path,
+            projectListOptions: .init(
+                all: true,
+                filters: ["status=running"],
+                format: "json",
+                quiet: true
+            )
+        ))
+
+        XCTAssertEqual(result.project.name, "container-compose-runtime")
+        XCTAssertEqual(result.project.sourcePath, workdir.path)
+        XCTAssertEqual(result.plan.operation, "ls")
+        XCTAssertEqual(result.plan.selectedServices, [])
+        XCTAssertEqual(result.plan.commands.map(\.action), [.listProjects])
+        XCTAssertEqual(result.plan.commands.first?.arguments, [
+            "compose",
+            "ls",
+            "--all",
+            "--filter", "status=running",
+            "--format", "json",
+            "--quiet"
+        ])
+        XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "ls")
+    }
+
     func testFacadePlansRemoveWithStopForSelectedServices() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

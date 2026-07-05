@@ -143,6 +143,7 @@ container-compose version
 container-compose version --format json
 container-compose compatibility --format json
 container-compose compatibility --area planner --status preservedDiagnostic
+container-compose ls --all --format json
 container-compose plan
 container-compose up --detach web
 container-compose run --rm web sh
@@ -203,5 +204,7 @@ Diagnostics are part of the product. Container Compose should warn when Compose 
 `container-compose commit [OPTIONS] SERVICE [REPOSITORY[:TAG]]` preserves Docker Compose's image-snapshot intent, including author, change, message, index, and pause options. Execution is blocked before invoking Apple Container until image commit behavior is verified.
 
 `container-compose events [OPTIONS] [SERVICE...]` preserves Docker Compose's project event-stream intent, including `--json`, `--since`, and `--until`. The `--json` flag belongs to the event stream format and does not request a Container Compose execution-report JSON envelope for this command.
+
+`container-compose ls [OPTIONS]` preserves Docker Compose's runtime project-list intent and does not require a Compose file in the current directory. It accepts `--all`, repeated `--filter`, `--format table|json`, and `--quiet`, but remains diagnostic-only until Apple Container project metadata discovery is verified.
 
 `container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

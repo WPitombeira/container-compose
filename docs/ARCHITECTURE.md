@@ -6,7 +6,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 1. `ContainerComposeCLI`
    - ArgumentParser executable.
-   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `images`, `stop`, `restart`, `kill`, `pause`, `unpause`, `attach`, `wait`, `scale`, `commit`, `events`, `rm`, `exec`, `cp`, `logs`, `ps`, `top`, and `stats`.
+   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `images`, `stop`, `restart`, `kill`, `pause`, `unpause`, `attach`, `wait`, `scale`, `commit`, `events`, `ls`, `rm`, `exec`, `cp`, `logs`, `ps`, `top`, and `stats`.
    - Executes `container` only after showing or building a command plan.
    - Ships as a SwiftPM executable that can be installed to a user-selected `PREFIX/bin`.
 
@@ -22,7 +22,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 3. Apple Container runtime
    - Invoked as `container <arguments>`.
-   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`. Pause, unpause, attach, wait, scale, commit, and events are diagnostic-only until Apple Container behavior is verified.
+   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`. Pause, unpause, attach, wait, scale, commit, events, and ls are diagnostic-only until Apple Container behavior is verified.
 
 ## Compose Compatibility Strategy
 
@@ -116,6 +116,7 @@ MVP behavior:
 - Accept `scale SERVICE=REPLICAS...` and preserve Docker Compose replica-count intent, including `--no-deps`. This is distinct from service-model `scale` and `deploy.replicas` preservation: the command records an imperative scale request, but execution remains blocked until Apple Container replica orchestration is verified.
 - Accept `commit [OPTIONS] SERVICE [REPOSITORY[:TAG]]` and preserve Docker Compose image-snapshot intent, including author, Dockerfile change, message, replica index, and pause behavior. The execution runner treats commit actions as unsupported before invoking Apple Container until image commit semantics are verified.
 - Accept `events [OPTIONS] [SERVICE...]` and preserve Docker Compose project event-stream intent, including `--json`, `--since`, and `--until`. The CLI treats `events --json` as Docker event-output formatting, not as the generic Container Compose execution-report JSON flag.
+- Accept `ls [OPTIONS]` without loading a Compose file and preserve Docker Compose runtime project-list intent, including `--all`, repeated `--filter`, `--format table|json`, and `--quiet`. This uses a synthetic projectless plan until Apple Container project metadata discovery is verified.
 - Resolve `port` from the normalized Compose model instead of invoking Apple Container. `ComposePortResolver` maps `SERVICE PRIVATE_PORT` plus protocol to declared published host endpoints and emits an index diagnostic because static model resolution does not inspect runtime replica state.
 - Plan `top` as one `container exec <service-container> ps` command per selected service. Keep a command diagnostic because Docker Compose reports engine-side process information while Apple Container currently exposes a useful in-container process fallback through exec.
 - Plan `stats` as project-scoped `container stats` calls using effective service container names, with `--no-stream` available for snapshot-style UI and CLI output.

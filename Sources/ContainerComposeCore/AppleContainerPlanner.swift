@@ -21,6 +21,7 @@ public enum PlanAction: String, Codable, Sendable {
     case scaleService
     case commitService
     case eventsProject
+    case listProjects
     case execService
     case copyService
     case logsService
@@ -311,7 +312,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -320,7 +321,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -329,7 +330,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -543,6 +544,25 @@ public struct AppleContainerEventsOptions: Codable, Equatable, Sendable {
         self.outputJSON = outputJSON
         self.since = since
         self.until = until
+    }
+}
+
+public struct AppleContainerProjectListOptions: Codable, Equatable, Sendable {
+    public var all: Bool
+    public var filters: [String]
+    public var format: String
+    public var quiet: Bool
+
+    public init(
+        all: Bool = false,
+        filters: [String] = [],
+        format: String = "table",
+        quiet: Bool = false
+    ) {
+        self.all = all
+        self.filters = filters
+        self.format = format
+        self.quiet = quiet
     }
 }
 
@@ -1363,6 +1383,53 @@ public struct AppleContainerPlanner: Sendable {
         return [
             PlannedCommand(
                 action: .eventsProject,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planProjectList(options: AppleContainerProjectListOptions = .init()) -> [PlannedCommand] {
+        var arguments = ["compose", "ls"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "ls",
+                message: "Docker Compose ls lists Compose projects from Docker runtime metadata, but Apple Container project discovery is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if options.all {
+            arguments.append("--all")
+        }
+
+        for filter in options.filters where !filter.isEmpty {
+            arguments.append(contentsOf: ["--filter", filter])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "ls.filter",
+                message: "Docker Compose --filter is preserved for project-list intent until Apple Container project metadata filtering is verified."
+            ))
+        }
+
+        if !options.format.isEmpty {
+            arguments.append(contentsOf: ["--format", options.format])
+            if options.format != "table", options.format != "json" {
+                diagnostics.append(.init(
+                    severity: .warning,
+                    path: "ls.format",
+                    message: "Docker Compose ls documents table and json formats; preserving unrecognized format '\(options.format)' as diagnostic intent."
+                ))
+            }
+        }
+
+        if options.quiet {
+            arguments.append("--quiet")
+        }
+
+        return [
+            PlannedCommand(
+                action: .listProjects,
                 arguments: arguments,
                 diagnostics: diagnostics
             )

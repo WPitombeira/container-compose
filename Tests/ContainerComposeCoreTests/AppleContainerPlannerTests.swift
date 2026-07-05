@@ -2937,6 +2937,37 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansProjectListCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let commands = AppleContainerPlanner().planProjectList(options: .init(
+            all: true,
+            filters: ["status=running", "name=demo"],
+            format: "json",
+            quiet: true
+        ))
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .listProjects)
+        XCTAssertNil(commands[0].service)
+        XCTAssertEqual(commands[0].arguments, [
+            "compose",
+            "ls",
+            "--all",
+            "--filter", "status=running",
+            "--filter", "name=demo",
+            "--format", "json",
+            "--quiet"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "ls"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "ls.filter"
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

@@ -23,6 +23,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case scale
     case commit
     case events
+    case ls
     case rm
     case exec
     case cp
@@ -64,6 +65,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var scaleOptions: AppleContainerScaleOptions
     public var commitOptions: AppleContainerCommitOptions
     public var eventsOptions: AppleContainerEventsOptions
+    public var projectListOptions: AppleContainerProjectListOptions
     public var copySource: String?
     public var copyDestination: String?
     public var copyOptions: AppleContainerCopyOptions
@@ -103,6 +105,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         scaleOptions: AppleContainerScaleOptions = .init(),
         commitOptions: AppleContainerCommitOptions = .init(),
         eventsOptions: AppleContainerEventsOptions = .init(),
+        projectListOptions: AppleContainerProjectListOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -141,6 +144,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.scaleOptions = scaleOptions
         self.commitOptions = commitOptions
         self.eventsOptions = eventsOptions
+        self.projectListOptions = projectListOptions
         self.copySource = copySource
         self.copyDestination = copyDestination
         self.copyOptions = copyOptions
@@ -250,6 +254,10 @@ public struct ContainerComposeService: Sendable {
     }
 
     public func makePlan(_ request: ContainerComposePlanRequest) throws -> ContainerComposePlanResult {
+        if request.operation == .ls {
+            return makeProjectlessPlan(request)
+        }
+
         var project = try loadProject(request)
         appendMissingServiceDiagnostics(to: &project, request: request)
         appendBuildDiagnostics(to: &project, request: request)
@@ -266,6 +274,27 @@ public struct ContainerComposeService: Sendable {
                 runtimeStatus: request.runtimeStatus,
                 selectedServices: selectedServicesForPlan(request),
                 emitReadinessChecks: request.emitReadinessChecks
+            )
+        )
+    }
+
+    private func makeProjectlessPlan(_ request: ContainerComposePlanRequest) -> ContainerComposePlanResult {
+        let projectName = request.projectName ?? "container-compose-runtime"
+        let project = ComposeProject(
+            name: projectName,
+            services: [],
+            sourcePath: request.projectDirectory
+        )
+        let commands = plannedCommands(for: request.operation, project: project, request: request)
+        return ContainerComposePlanResult(
+            project: project,
+            plan: AppleContainerPlan(
+                project: project,
+                operation: planOperationName(for: request.operation),
+                commands: commands,
+                runtimeStatus: request.runtimeStatus,
+                selectedServices: [],
+                emitReadinessChecks: false
             )
         )
     }
@@ -402,6 +431,8 @@ public struct ContainerComposeService: Sendable {
                 services: request.services,
                 options: request.eventsOptions
             )
+        case .ls:
+            return planner.planProjectList(options: request.projectListOptions)
         case .rm:
             return planner.planRemove(
                 project: project,
@@ -555,7 +586,7 @@ public struct ContainerComposeService: Sendable {
         switch operation {
         case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .events, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
-        case .config, .convert, .down:
+        case .config, .convert, .down, .ls:
             return false
         }
     }
