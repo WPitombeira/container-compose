@@ -1201,6 +1201,48 @@ final class ComposeLoaderTests: XCTestCase {
             ComposeEnvFile(path: "optional.env", required: false),
             ComposeEnvFile(path: "raw.env", format: "raw")
         ])
+        XCTAssertTrue(web.environment.isEmpty)
+        XCTAssertFalse(project.diagnostics.contains { $0.path == "services.web.env_file" })
+    }
+
+    func testCanResolveServiceEnvFilesIntoEnvironmentForConfigOutput() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        SHARED=base
+        FROM_DEFAULTS=enabled
+        OVERRIDDEN=from-defaults
+        """.write(to: workdir.appendingPathComponent("defaults.env"), atomically: true, encoding: .utf8)
+        try """
+        OVERRIDDEN=from-local
+        LOCAL_ONLY=true
+        """.write(to: workdir.appendingPathComponent("local.env"), atomically: true, encoding: .utf8)
+        try """
+        services:
+          web:
+            image: nginx
+            env_file:
+              - defaults.env
+              - local.env
+              - path: missing.env
+                required: false
+            environment:
+              OVERRIDDEN: explicit
+              INLINE: value
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let project = try ComposeLoader(resolveServiceEnvFiles: true).load(workingDirectory: workdir.path)
+        let web = try XCTUnwrap(project.services.first { $0.name == "web" })
+
+        XCTAssertEqual(web.envFiles, ["defaults.env", "local.env", "missing.env"])
+        XCTAssertEqual(web.environment, [
+            "SHARED": "base",
+            "FROM_DEFAULTS": "enabled",
+            "OVERRIDDEN": "explicit",
+            "LOCAL_ONLY": "true",
+            "INLINE": "value"
+        ])
         XCTAssertFalse(project.diagnostics.contains { $0.path == "services.web.env_file" })
     }
 

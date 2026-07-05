@@ -56,6 +56,7 @@ public struct ComposeLoader: Sendable {
     private let environment: [String: String]
     private let envFiles: [String]?
     private let interpolate: Bool
+    private let resolveServiceEnvFiles: Bool
     private let remoteIncludeResolver: RemoteIncludeResolver
     private let allowRemoteIncludes: Bool
 
@@ -77,12 +78,14 @@ public struct ComposeLoader: Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         envFiles: [String]? = nil,
         interpolate: Bool = true,
+        resolveServiceEnvFiles: Bool = false,
         allowRemoteIncludes: Bool = false,
         remoteIncludeFetcher: RemoteIncludeFetcher? = nil
     ) {
         self.environment = environment
         self.envFiles = envFiles
         self.interpolate = interpolate
+        self.resolveServiceEnvFiles = resolveServiceEnvFiles
         self.allowRemoteIncludes = allowRemoteIncludes
         let fetcher = remoteIncludeFetcher ?? { url in
             try Self.fetchRemoteInclude(from: url)
@@ -96,12 +99,14 @@ public struct ComposeLoader: Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         envFiles: [String]? = nil,
         interpolate: Bool = true,
+        resolveServiceEnvFiles: Bool = false,
         allowRemoteIncludes: Bool = false,
         remoteIncludeResolver: @escaping RemoteIncludeResolver
     ) {
         self.environment = environment
         self.envFiles = envFiles
         self.interpolate = interpolate
+        self.resolveServiceEnvFiles = resolveServiceEnvFiles
         self.allowRemoteIncludes = allowRemoteIncludes
         self.remoteIncludeResolver = remoteIncludeResolver
     }
@@ -1968,6 +1973,13 @@ public struct ComposeLoader: Sendable {
         )
         let labelFiles = parseStringList(mapping["label_file"], path: "services.\(name).label_file", diagnostics: &diagnostics)
         let envFileEntries = parseEnvFiles(mapping["env_file"], path: "services.\(name).env_file", diagnostics: &diagnostics)
+        let environment = resolvedServiceEnvironment(
+            envFileEntries: envFileEntries,
+            environmentValue: mapping["environment"],
+            serviceName: name,
+            sourcePath: sourcePath,
+            diagnostics: &diagnostics
+        )
         let dependsOn = uniquePreservingOrder(
             parseNameReferences(mapping["depends_on"], path: "services.\(name).depends_on", diagnostics: &diagnostics)
             + linkDependencies
@@ -1998,7 +2010,7 @@ public struct ComposeLoader: Sendable {
             build: parseBuild(mapping["build"], path: "services.\(name).build", diagnostics: &diagnostics),
             command: parseCommand(mapping["command"], path: "services.\(name).command", diagnostics: &diagnostics),
             entrypoint: parseEntrypoint(mapping["entrypoint"], path: "services.\(name).entrypoint", diagnostics: &diagnostics),
-            environment: parseEnvironment(mapping["environment"], path: "services.\(name).environment", diagnostics: &diagnostics),
+            environment: environment,
             envFiles: envFileEntries.map(\.path),
             envFileEntries: envFileEntries,
             annotations: parseLabels(mapping["annotations"]),
@@ -2703,6 +2715,51 @@ public struct ComposeLoader: Sendable {
         }
         diagnostics.append(.init(severity: .warning, path: path, message: "Unsupported environment format was ignored."))
         return [:]
+    }
+
+    private func resolvedServiceEnvironment(
+        envFileEntries: [ComposeEnvFile],
+        environmentValue: Any?,
+        serviceName: String,
+        sourcePath: String,
+        diagnostics: inout [ComposeDiagnostic]
+    ) -> [String: String] {
+        let explicitEnvironment = parseEnvironment(
+            environmentValue,
+            path: "services.\(serviceName).environment",
+            diagnostics: &diagnostics
+        )
+        guard resolveServiceEnvFiles else {
+            return explicitEnvironment
+        }
+
+        var fileEnvironment: [String: String] = [:]
+        for entry in envFileEntries {
+            guard entry.format?.isEmpty != false else {
+                diagnostics.append(.init(
+                    severity: .warning,
+                    path: "services.\(serviceName).env_file",
+                    message: "env_file format '\(entry.format ?? "")' is preserved but not resolved into config output yet."
+                ))
+                continue
+            }
+            let resolvedPath = resolvePath(entry.path, relativeTo: containingDirectory(for: sourcePath))
+            guard FileManager.default.fileExists(atPath: resolvedPath) else {
+                if entry.required != false {
+                    diagnostics.append(.init(
+                        severity: .warning,
+                        path: "services.\(serviceName).env_file",
+                        message: "env_file does not exist and could not be resolved into config output: \(entry.path)"
+                    ))
+                }
+                continue
+            }
+            fileEnvironment.merge(
+                EnvironmentResolver.loadEnvFileValues(from: URL(fileURLWithPath: resolvedPath))
+            ) { _, new in new }
+        }
+
+        return fileEnvironment.merging(explicitEnvironment) { _, explicit in explicit }
     }
 
     private func parseEnvFiles(_ value: Any?, path: String, diagnostics: inout [ComposeDiagnostic]) -> [ComposeEnvFile] {

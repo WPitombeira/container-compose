@@ -68,6 +68,7 @@ struct ComposeOptions: ParsableArguments {
         createOptions: AppleContainerCreateOptions = .init(),
         emitReadinessChecks: Bool = false,
         interpolate: Bool = true,
+        resolveServiceEnvFiles: Bool = false,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         standardInput: FileHandle = .standardInput
     ) throws -> ContainerComposePlanRequest {
@@ -85,6 +86,7 @@ struct ComposeOptions: ParsableArguments {
             environment: environment,
             composeEnvFiles: envFiles,
             interpolate: interpolate,
+            resolveServiceEnvFiles: resolveServiceEnvFiles,
             allowRemoteIncludes: allowRemoteIncludes,
             emitReadinessChecks: emitReadinessChecks,
             detach: detach,
@@ -150,7 +152,11 @@ struct Config: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        let request = try options.makeRequest(operation: .config, interpolate: !renderOptions.noInterpolate)
+        let request = try options.makeRequest(
+            operation: .config,
+            interpolate: !renderOptions.noInterpolate,
+            resolveServiceEnvFiles: !renderOptions.noEnvResolution
+        )
         let project = try ContainerComposeService().loadProject(request)
         try renderOptions.render(
             project: project,
@@ -168,7 +174,11 @@ struct Convert: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        let request = try options.makeRequest(operation: .convert, interpolate: !renderOptions.noInterpolate)
+        let request = try options.makeRequest(
+            operation: .convert,
+            interpolate: !renderOptions.noInterpolate,
+            resolveServiceEnvFiles: !renderOptions.noEnvResolution
+        )
         let project = try ContainerComposeService().loadProject(request)
         try renderOptions.render(
             project: project,
@@ -304,6 +314,9 @@ struct ConfigRenderOptions: ParsableArguments {
 
     @Flag(name: .customLong("no-interpolate"), help: "Do not interpolate environment variables before rendering the model.")
     var noInterpolate = false
+
+    @Flag(name: .customLong("no-env-resolution"), help: "Do not resolve service env_file values into rendered service environments.")
+    var noEnvResolution = false
 
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false

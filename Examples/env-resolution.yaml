@@ -1,0 +1,9 @@
+name: container-compose-env-resolution
+
+services:
+  web:
+    image: nginx:alpine
+    env_file:
+      - web.env
+    environment:
+      LOG_LEVEL: debug

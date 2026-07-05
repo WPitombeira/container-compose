@@ -148,6 +148,42 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands, [])
     }
 
+    func testFacadeCanResolveServiceEnvFilesForConfigPreview() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try "IMAGE=nginx:alpine\nLOG_LEVEL=info\n".write(
+            to: workdir.appendingPathComponent("service.env"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .config,
+            composeYAML: """
+            services:
+              web:
+                image: ${IMAGE}
+                env_file: service.env
+                environment:
+                  LOG_LEVEL: debug
+            """,
+            projectDirectory: workdir.path,
+            environment: ["IMAGE": "busybox"],
+            resolveServiceEnvFiles: true
+        ))
+
+        let web = try XCTUnwrap(result.project.services.first)
+        XCTAssertEqual(web.image, "busybox")
+        XCTAssertEqual(web.envFiles, ["service.env"])
+        XCTAssertEqual(web.environment, [
+            "IMAGE": "nginx:alpine",
+            "LOG_LEVEL": "debug"
+        ])
+        XCTAssertEqual(result.plan.operation, "config")
+        XCTAssertEqual(result.plan.commands, [])
+    }
+
     func testInMemoryComposeYAMLResolvesLongSyntaxIncludeProjectDirectoryAndEnvFile() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

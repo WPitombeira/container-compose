@@ -60,6 +60,7 @@ container-compose config --environment
 container-compose config --variables
 container-compose config --hash '*'
 container-compose config --no-interpolate
+container-compose config --no-env-resolution
 container-compose config --models
 container-compose version
 container-compose compatibility

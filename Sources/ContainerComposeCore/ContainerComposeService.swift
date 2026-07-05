@@ -50,6 +50,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var environment: [String: String]
     public var composeEnvFiles: [String]
     public var interpolate: Bool
+    public var resolveServiceEnvFiles: Bool
     public var allowRemoteIncludes: Bool
     public var emitReadinessChecks: Bool
     public var runtimeStatus: AppleContainerRuntimeStatus?
@@ -95,6 +96,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         environment: [String: String] = ProcessInfo.processInfo.environment,
         composeEnvFiles: [String] = [],
         interpolate: Bool = true,
+        resolveServiceEnvFiles: Bool = false,
         allowRemoteIncludes: Bool = false,
         emitReadinessChecks: Bool = false,
         runtimeStatus: AppleContainerRuntimeStatus? = nil,
@@ -139,6 +141,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.environment = environment
         self.composeEnvFiles = composeEnvFiles
         self.interpolate = interpolate
+        self.resolveServiceEnvFiles = resolveServiceEnvFiles
         self.allowRemoteIncludes = allowRemoteIncludes
         self.emitReadinessChecks = emitReadinessChecks
         self.runtimeStatus = runtimeStatus
@@ -208,6 +211,7 @@ public struct ContainerComposeService: Sendable {
                 environment: request.environment,
                 envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles,
                 interpolate: request.interpolate,
+                resolveServiceEnvFiles: request.resolveServiceEnvFiles,
                 allowRemoteIncludes: request.allowRemoteIncludes,
                 remoteIncludeResolver: remoteIncludeResolver
             )
@@ -216,6 +220,7 @@ public struct ContainerComposeService: Sendable {
                 environment: request.environment,
                 envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles,
                 interpolate: request.interpolate,
+                resolveServiceEnvFiles: request.resolveServiceEnvFiles,
                 allowRemoteIncludes: request.allowRemoteIncludes,
                 remoteIncludeFetcher: remoteIncludeFetcher
             )

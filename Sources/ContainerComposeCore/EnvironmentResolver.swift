@@ -270,9 +270,13 @@ public struct EnvironmentResolver: Sendable {
         character == "_" || character.isASCIIAlpha || character.isASCIIDigit
     }
 
-    private static func loadDotEnvValues(from fileURL: URL) -> [String: String] {
+    public static func loadEnvFileValues(from fileURL: URL) -> [String: String] {
         guard let content = try? String(contentsOf: fileURL, encoding: .utf8) else { return [:] }
         return parseDotEnv(content)
+    }
+
+    private static func loadDotEnvValues(from fileURL: URL) -> [String: String] {
+        loadEnvFileValues(from: fileURL)
     }
 
     private static func parseDotEnv(_ content: String) -> [String: String] {
