@@ -158,6 +158,7 @@ container-compose kill --signal SIGINT web
 container-compose pause web
 container-compose unpause web
 container-compose attach web
+container-compose wait --down-project web
 container-compose rm --stop web
 container-compose exec web sh
 container-compose cp web:/var/log/app.log ./app.log
@@ -191,5 +192,7 @@ Diagnostics are part of the product. Container Compose should warn when Compose 
 `container-compose pause` and `container-compose unpause` accept Docker Compose's service-targeting shape and emit planned actions with diagnostics. Execution is blocked before invoking Apple Container until pause and unpause support is verified.
 
 `container-compose attach SERVICE` accepts Docker Compose's single-service attach shape and preserves attach options in the plan. Execution is blocked before invoking Apple Container until interactive stream, detach-key, and signal-proxy behavior is verified.
+
+`container-compose wait [SERVICE...]` preserves Docker Compose's stop-wait intent, including `--down-project`. It is separate from `up --wait`, which models dependency readiness before starting services.
 
 `container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

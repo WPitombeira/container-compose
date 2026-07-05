@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -49,6 +49,7 @@ struct ComposeOptions: ParsableArguments {
         execCommand: [String] = [],
         execOptions: AppleContainerExecOptions = .init(),
         attachOptions: AppleContainerAttachOptions = .init(),
+        waitOptions: AppleContainerWaitOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -87,6 +88,7 @@ struct ComposeOptions: ParsableArguments {
             execCommand: execCommand,
             execOptions: execOptions,
             attachOptions: attachOptions,
+            waitOptions: waitOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -775,6 +777,30 @@ struct Attach: ParsableCommand {
             operation: .attach,
             services: [service],
             attachOptions: attachOptions
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
+    }
+}
+
+struct Wait: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose wait intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("down-project"), help: "Preserve Docker Compose project cleanup intent after the first container stops.")
+    var downProject = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Optional service names to wait for.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .wait,
+            services: services,
+            waitOptions: .init(downProject: downProject)
         ))
         try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }

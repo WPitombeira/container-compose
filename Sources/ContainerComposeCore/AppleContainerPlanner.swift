@@ -17,6 +17,7 @@ public enum PlanAction: String, Codable, Sendable {
     case pauseService
     case unpauseService
     case attachService
+    case waitService
     case execService
     case copyService
     case logsService
@@ -307,7 +308,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -316,7 +317,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -325,7 +326,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -482,6 +483,14 @@ public struct AppleContainerAttachOptions: Codable, Equatable, Sendable {
         self.replicaIndex = replicaIndex
         self.attachStdin = attachStdin
         self.signalProxy = signalProxy
+    }
+}
+
+public struct AppleContainerWaitOptions: Codable, Equatable, Sendable {
+    public var downProject: Bool
+
+    public init(downProject: Bool = false) {
+        self.downProject = downProject
     }
 }
 
@@ -1063,6 +1072,40 @@ public struct AppleContainerPlanner: Sendable {
                 diagnostics: diagnostics
             )
         ]
+    }
+
+    public func planWait(
+        project: ComposeProject,
+        services selectedServices: [String] = [],
+        options: AppleContainerWaitOptions = .init()
+    ) -> [PlannedCommand] {
+        selectedOrderedServices(project.services, selectedServices: selectedServices).map { service in
+            var arguments = ["wait"]
+            var diagnostics: [ComposeDiagnostic] = [
+                .init(
+                    severity: .warning,
+                    path: "wait",
+                    message: "Docker Compose wait blocks until service containers stop, but Apple Container wait support is unavailable or unverified; this planned action is not executable yet."
+                )
+            ]
+
+            if options.downProject {
+                arguments.append("--down-project")
+                diagnostics.append(.init(
+                    severity: .warning,
+                    path: "wait.down_project",
+                    message: "Docker Compose --down-project removes the project after the first container stops, but Container Compose only preserves this wait intent until runtime behavior is verified."
+                ))
+            }
+
+            arguments.append(containerName(project: project.name, service: service))
+            return PlannedCommand(
+                action: .waitService,
+                service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        }
     }
 
     public func planRemove(

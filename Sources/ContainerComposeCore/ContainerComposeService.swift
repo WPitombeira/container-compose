@@ -19,6 +19,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case pause
     case unpause
     case attach
+    case wait
     case rm
     case exec
     case cp
@@ -55,6 +56,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var execCommand: [String]
     public var execOptions: AppleContainerExecOptions
     public var attachOptions: AppleContainerAttachOptions
+    public var waitOptions: AppleContainerWaitOptions
     public var copySource: String?
     public var copyDestination: String?
     public var copyOptions: AppleContainerCopyOptions
@@ -89,6 +91,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         execCommand: [String] = [],
         execOptions: AppleContainerExecOptions = .init(),
         attachOptions: AppleContainerAttachOptions = .init(),
+        waitOptions: AppleContainerWaitOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -122,6 +125,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.execCommand = execCommand
         self.execOptions = execOptions
         self.attachOptions = attachOptions
+        self.waitOptions = waitOptions
         self.copySource = copySource
         self.copyDestination = copyDestination
         self.copyOptions = copyOptions
@@ -358,6 +362,12 @@ public struct ContainerComposeService: Sendable {
                 service: request.services.first,
                 options: request.attachOptions
             )
+        case .wait:
+            return planner.planWait(
+                project: project,
+                services: request.services,
+                options: request.waitOptions
+            )
         case .rm:
             return planner.planRemove(
                 project: project,
@@ -509,7 +519,7 @@ public struct ContainerComposeService: Sendable {
 
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
+        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
         case .config, .convert, .down:
             return false

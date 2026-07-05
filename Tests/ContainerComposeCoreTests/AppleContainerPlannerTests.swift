@@ -2720,6 +2720,44 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansWaitCommandsWithUnsupportedRuntimeDiagnosticAndDownProjectIntent() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx", dependsOn: ["db"]),
+                ComposeService(name: "db", image: "postgres", containerName: "database")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planWait(
+            project: project,
+            services: ["db", "web"],
+            options: .init(downProject: true)
+        )
+
+        XCTAssertEqual(commands.count, 2)
+        XCTAssertEqual(commands[0].action, .waitService)
+        XCTAssertEqual(commands[0].service, "db")
+        XCTAssertEqual(commands[0].arguments, ["wait", "--down-project", "database"])
+        XCTAssertEqual(commands[1].action, .waitService)
+        XCTAssertEqual(commands[1].service, "web")
+        XCTAssertEqual(commands[1].arguments, ["wait", "--down-project", "demo_web_1"])
+        XCTAssertTrue(commands.allSatisfy { command in
+            command.diagnostics.contains {
+                $0.severity == .warning
+                    && $0.path == "wait"
+                    && $0.message.contains("not executable yet")
+            }
+        })
+        XCTAssertTrue(commands.allSatisfy { command in
+            command.diagnostics.contains {
+                $0.severity == .warning
+                    && $0.path == "wait.down_project"
+            }
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",
