@@ -516,6 +516,22 @@ final class ContainerRuntimeTests: XCTestCase {
         XCTAssertEqual(report.summary.skipped, 1)
     }
 
+    func testExecutionRunnerFailsPauseCommandsWithoutCallingExecutor() {
+        let executor = FakeContainerCommandExecutor()
+        let plan = makePlan(commands: [
+            PlannedCommand(action: .pauseService, service: "web", arguments: ["pause", "demo_web_1"]),
+            PlannedCommand(action: .startService, service: "worker", arguments: ["start", "demo_worker_1"])
+        ])
+
+        let report = AppleContainerExecutionRunner().run(plan: plan, dryRun: false, executor: executor)
+
+        XCTAssertEqual(executor.calls, [])
+        XCTAssertEqual(report.results.map(\.status), [.failed, .skipped])
+        XCTAssertEqual(report.results[0].errorCode, .unsupportedPlanAction)
+        XCTAssertEqual(report.results[0].error, "Planned action pauseService is not executable through Apple Container yet.")
+        XCTAssertEqual(report.results[1].errorCode, .skippedPreviousFailure)
+    }
+
     func testExecutionRunnerMapsThrownExecutorErrorToStableErrorCode() {
         let executor = FakeContainerCommandExecutor(results: [
             .failure(ContainerCommandExecutionError.containerCLIUnavailable)

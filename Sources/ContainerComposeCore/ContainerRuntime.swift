@@ -760,13 +760,13 @@ public struct AppleContainerExecutionRunner {
     }
 
     private func unsupportedPlanActionExecution(commandIndex: Int, command: PlannedCommand) -> PlannedCommandExecution? {
-        guard command.action == .delegateService else { return nil }
+        guard command.action == .delegateService || command.action == .pauseService else { return nil }
         return PlannedCommandExecution(
             commandIndex: commandIndex,
             command: command,
             status: .failed,
             errorCode: .unsupportedPlanAction,
-            error: "Planned action delegateService is not executable through Apple Container yet."
+            error: "Planned action \(command.action.rawValue) is not executable through Apple Container yet."
         )
     }
 

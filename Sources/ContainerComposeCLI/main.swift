@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -702,6 +702,23 @@ struct Kill: ParsableCommand {
             signal: signal
         ))
         try execute(result.plan, dryRun: dryRun, json: json)
+    }
+}
+
+struct Pause: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose pause intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Optional service names to pause.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(operation: .pause, services: services))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }
 
