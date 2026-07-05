@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public enum ComposeConfigProjectionMode: String, Codable, CaseIterable, Sendable {
     case services
@@ -9,6 +10,17 @@ public enum ComposeConfigProjectionMode: String, Codable, CaseIterable, Sendable
     case models
     case environment
     case variables
+}
+
+public enum ComposeConfigProjectionError: Error, LocalizedError, Equatable, Sendable {
+    case noSuchService(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .noSuchService(let service):
+            return "no such service: \(service): not found"
+        }
+    }
 }
 
 public struct ComposeConfigProjection: Codable, Equatable, Sendable {
@@ -71,5 +83,28 @@ public struct ComposeConfigProjection: Codable, Equatable, Sendable {
             .map { variable in
                 "\(variable.name)=\(variable.defaultValue ?? "")"
             }
+    }
+
+    public static func serviceHashValues(in project: ComposeProject, target: String) throws -> [String] {
+        let services: [ComposeService]
+        if target == "*" {
+            services = project.services
+        } else if let service = project.services.first(where: { $0.name == target }) {
+            services = [service]
+        } else {
+            throw ComposeConfigProjectionError.noSuchService(target)
+        }
+
+        return try services.map { service in
+            "\(service.name) \(try serviceConfigHash(service))"
+        }
+    }
+
+    public static func serviceConfigHash(_ service: ComposeService) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let data = try encoder.encode(service)
+        let digest = SHA256.hash(data: data)
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }

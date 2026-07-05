@@ -58,6 +58,7 @@ container-compose config
 container-compose convert --format yaml
 container-compose config --environment
 container-compose config --variables
+container-compose config --hash '*'
 container-compose config --models
 container-compose version
 container-compose compatibility

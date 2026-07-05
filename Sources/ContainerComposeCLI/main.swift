@@ -297,6 +297,9 @@ struct ConfigRenderOptions: ParsableArguments {
     @Flag(name: .customLong("variables"), help: "Print model variables and default values, one per line.")
     var variables = false
 
+    @Option(name: .customLong("hash"), help: "Print a service config hash. Use '*' to print all service hashes.")
+    var hash: String?
+
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false
 
@@ -316,6 +319,13 @@ struct ConfigRenderOptions: ParsableArguments {
         if quiet {
             return
         }
+        if let hash {
+            try validateSingleProjection(commandName: commandName)
+            let text = try ComposeConfigProjection.serviceHashValues(in: project, target: hash)
+                .joined(separator: "\n") + "\n"
+            try writeConfigOutput(text)
+            return
+        }
         if let projectionMode = try selectedProjectionMode(commandName: commandName) {
             let text = ComposeConfigProjection.values(
                 for: projectionMode,
@@ -331,6 +341,11 @@ struct ConfigRenderOptions: ParsableArguments {
     }
 
     private func selectedProjectionMode(commandName: String) throws -> ComposeConfigProjectionMode? {
+        try validateSingleProjection(commandName: commandName)
+        return selectedProjectionModes.first
+    }
+
+    private var selectedProjectionModes: [ComposeConfigProjectionMode] {
         let selected: [(Bool, ComposeConfigProjectionMode)] = [
             (services, .services),
             (images, .images),
@@ -341,13 +356,16 @@ struct ConfigRenderOptions: ParsableArguments {
             (environment, .environment),
             (variables, .variables)
         ]
-        let modes = selected.compactMap { isSelected, mode in
+        return selected.compactMap { isSelected, mode in
             isSelected ? mode : nil
         }
-        guard modes.count <= 1 else {
+    }
+
+    private func validateSingleProjection(commandName: String) throws {
+        let selectedCount = selectedProjectionModes.count + (hash == nil ? 0 : 1)
+        guard selectedCount <= 1 else {
             throw ValidationError("\(commandName) accepts only one projection flag at a time")
         }
-        return modes.first
     }
 
     private func writeConfigOutput(_ text: String) throws {

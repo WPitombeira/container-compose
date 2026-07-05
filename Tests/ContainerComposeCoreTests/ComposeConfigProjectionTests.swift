@@ -79,6 +79,32 @@ final class ComposeConfigProjectionTests: XCTestCase {
         )
     }
 
+    func testProjectsServiceHashesForOneServiceAndAllServices() throws {
+        let project = makeProject()
+
+        let apiHash = try ComposeConfigProjection.serviceConfigHash(project.services[0])
+        XCTAssertEqual(apiHash.count, 64)
+
+        XCTAssertEqual(
+            try ComposeConfigProjection.serviceHashValues(in: project, target: "api"),
+            ["api \(apiHash)"]
+        )
+        XCTAssertEqual(
+            try ComposeConfigProjection.serviceHashValues(in: project, target: "*").map { String($0.split(separator: " ")[0]) },
+            ["api", "worker", "web"]
+        )
+
+        var changed = project.services[0]
+        changed.image = "example/api:next"
+        XCTAssertNotEqual(try ComposeConfigProjection.serviceConfigHash(changed), apiHash)
+    }
+
+    func testProjectServiceHashRejectsUnknownService() {
+        XCTAssertThrowsError(try ComposeConfigProjection.serviceHashValues(in: makeProject(), target: "missing")) { error in
+            XCTAssertEqual(error as? ComposeConfigProjectionError, .noSuchService("missing"))
+        }
+    }
+
     private func makeProject() -> ComposeProject {
         ComposeProject(
             name: "demo",
