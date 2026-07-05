@@ -24,6 +24,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case commit
     case export
     case events
+    case watch
     case ls
     case rm
     case exec
@@ -67,6 +68,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var commitOptions: AppleContainerCommitOptions
     public var exportOptions: AppleContainerExportOptions
     public var eventsOptions: AppleContainerEventsOptions
+    public var watchOptions: AppleContainerWatchOptions
     public var projectListOptions: AppleContainerProjectListOptions
     public var copySource: String?
     public var copyDestination: String?
@@ -108,6 +110,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         commitOptions: AppleContainerCommitOptions = .init(),
         exportOptions: AppleContainerExportOptions = .init(),
         eventsOptions: AppleContainerEventsOptions = .init(),
+        watchOptions: AppleContainerWatchOptions = .init(),
         projectListOptions: AppleContainerProjectListOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
@@ -148,6 +151,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.commitOptions = commitOptions
         self.exportOptions = exportOptions
         self.eventsOptions = eventsOptions
+        self.watchOptions = watchOptions
         self.projectListOptions = projectListOptions
         self.copySource = copySource
         self.copyDestination = copyDestination
@@ -441,6 +445,12 @@ public struct ContainerComposeService: Sendable {
                 services: request.services,
                 options: request.eventsOptions
             )
+        case .watch:
+            return planner.planWatch(
+                project: project,
+                services: request.services,
+                options: request.watchOptions
+            )
         case .ls:
             return planner.planProjectList(options: request.projectListOptions)
         case .rm:
@@ -594,7 +604,7 @@ public struct ContainerComposeService: Sendable {
 
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .export, .events, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
+        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .export, .events, .watch, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
         case .config, .convert, .down, .ls:
             return false

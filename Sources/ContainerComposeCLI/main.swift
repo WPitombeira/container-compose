@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Ls.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Watch.self, Ls.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -55,6 +55,7 @@ struct ComposeOptions: ParsableArguments {
         commitOptions: AppleContainerCommitOptions = .init(),
         exportOptions: AppleContainerExportOptions = .init(),
         eventsOptions: AppleContainerEventsOptions = .init(),
+        watchOptions: AppleContainerWatchOptions = .init(),
         projectListOptions: AppleContainerProjectListOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
@@ -100,6 +101,7 @@ struct ComposeOptions: ParsableArguments {
             commitOptions: commitOptions,
             exportOptions: exportOptions,
             eventsOptions: eventsOptions,
+            watchOptions: watchOptions,
             projectListOptions: projectListOptions,
             copySource: copySource,
             copyDestination: copyDestination,
@@ -972,7 +974,7 @@ struct Events: ParsableCommand {
     @Option(name: .customLong("until"), help: "Stream events until this timestamp or relative duration.")
     var until: String?
 
-    @Argument(help: "Optional service names to watch.")
+    @Argument(help: "Optional service names to watch for events.")
     var services: [String] = []
 
     func run() throws {
@@ -986,6 +988,40 @@ struct Events: ParsableCommand {
             )
         ))
         try execute(result.plan, dryRun: true, json: false, enforceReadiness: true)
+    }
+}
+
+struct Watch: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose watch intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("no-up"), help: "Do not build and start services before watching.")
+    var noUp = false
+
+    @Option(name: .customLong("prune"), help: "Prune dangling images on rebuild. Defaults to true.")
+    var prune = true
+
+    @Flag(name: .customLong("quiet"), help: "Hide build output.")
+    var quiet = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Optional service names to watch.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .watch,
+            services: services,
+            watchOptions: .init(
+                noUp: noUp,
+                prune: prune,
+                quiet: quiet
+            )
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }
 

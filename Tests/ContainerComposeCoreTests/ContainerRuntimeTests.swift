@@ -644,6 +644,22 @@ final class ContainerRuntimeTests: XCTestCase {
         XCTAssertEqual(report.results[1].errorCode, .skippedPreviousFailure)
     }
 
+    func testExecutionRunnerFailsWatchCommandsWithoutCallingExecutor() {
+        let executor = FakeContainerCommandExecutor()
+        let plan = makePlan(commands: [
+            PlannedCommand(action: .watchProject, arguments: ["watch", "--no-up", "web"]),
+            PlannedCommand(action: .startService, service: "worker", arguments: ["start", "demo_worker_1"])
+        ])
+
+        let report = AppleContainerExecutionRunner().run(plan: plan, dryRun: false, executor: executor)
+
+        XCTAssertEqual(executor.calls, [])
+        XCTAssertEqual(report.results.map(\.status), [.failed, .skipped])
+        XCTAssertEqual(report.results[0].errorCode, .unsupportedPlanAction)
+        XCTAssertEqual(report.results[0].error, "Planned action watchProject is not executable through Apple Container yet.")
+        XCTAssertEqual(report.results[1].errorCode, .skippedPreviousFailure)
+    }
+
     func testExecutionRunnerFailsListProjectsCommandsWithoutCallingExecutor() {
         let executor = FakeContainerCommandExecutor()
         let plan = makePlan(commands: [

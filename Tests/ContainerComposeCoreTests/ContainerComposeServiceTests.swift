@@ -1609,6 +1609,46 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "events")
     }
 
+    func testFacadePlansWatchForSelectedServicesWithDiagnostic() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+            develop:
+              watch:
+                - path: ./src
+                  action: rebuild
+          db:
+            image: postgres
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .watch,
+            projectDirectory: workdir.path,
+            projectName: "demo",
+            services: ["web"],
+            watchOptions: .init(noUp: true, prune: false, quiet: true)
+        ))
+
+        XCTAssertEqual(result.plan.operation, "watch")
+        XCTAssertEqual(result.plan.selectedServices, ["web"])
+        XCTAssertEqual(result.plan.commands.map(\.action), [.watchProject])
+        XCTAssertEqual(result.plan.commands.first?.arguments, [
+            "watch",
+            "--no-up",
+            "--prune=false",
+            "--quiet",
+            "web"
+        ])
+        XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "watch")
+        XCTAssertTrue(result.plan.commands.first?.diagnostics.contains {
+            $0.path == "services.web.develop.watch"
+        } == true)
+    }
+
     func testFacadePlansProjectListWithoutComposeFileDiscovery() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

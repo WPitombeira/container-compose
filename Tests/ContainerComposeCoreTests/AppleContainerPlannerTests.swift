@@ -2993,6 +2993,65 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansWatchCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(
+                    name: "web",
+                    image: "nginx",
+                    develop: ComposeDevelop(watch: [
+                        ComposeDevelopWatchRule(path: "./src", action: "sync", target: "/app")
+                    ])
+                ),
+                ComposeService(name: "db", image: "postgres")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planWatch(
+            project: project,
+            services: ["web"],
+            options: .init(
+                noUp: true,
+                prune: false,
+                quiet: true
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .watchProject)
+        XCTAssertNil(commands[0].service)
+        XCTAssertEqual(commands[0].arguments, [
+            "watch",
+            "--no-up",
+            "--prune=false",
+            "--quiet",
+            "web"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "watch"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "watch.no_up"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "watch.prune"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "watch.quiet"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "services.web.develop.watch"
+        })
+    }
+
     func testPlansProjectListCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
         let commands = AppleContainerPlanner().planProjectList(options: .init(
             all: true,

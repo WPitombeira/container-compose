@@ -22,6 +22,7 @@ public enum PlanAction: String, Codable, Sendable {
     case commitService
     case exportService
     case eventsProject
+    case watchProject
     case listProjects
     case execService
     case copyService
@@ -313,7 +314,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -322,7 +323,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -331,7 +332,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -558,6 +559,22 @@ public struct AppleContainerEventsOptions: Codable, Equatable, Sendable {
         self.outputJSON = outputJSON
         self.since = since
         self.until = until
+    }
+}
+
+public struct AppleContainerWatchOptions: Codable, Equatable, Sendable {
+    public var noUp: Bool
+    public var prune: Bool
+    public var quiet: Bool
+
+    public init(
+        noUp: Bool = false,
+        prune: Bool = true,
+        quiet: Bool = false
+    ) {
+        self.noUp = noUp
+        self.prune = prune
+        self.quiet = quiet
     }
 }
 
@@ -1471,6 +1488,67 @@ public struct AppleContainerPlanner: Sendable {
         return [
             PlannedCommand(
                 action: .eventsProject,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planWatch(
+        project: ComposeProject,
+        services selectedServices: [String] = [],
+        options: AppleContainerWatchOptions = .init()
+    ) -> [PlannedCommand] {
+        var arguments = ["watch"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "watch",
+                message: "Docker Compose watch rebuilds or refreshes services when files change, but Apple Container watch, sync, rebuild, and restart behavior is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if options.noUp {
+            arguments.append("--no-up")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "watch.no_up",
+                message: "Docker Compose --no-up skips the initial build and start before watching; Container Compose preserves this intent until watch behavior is verified."
+            ))
+        }
+
+        if !options.prune {
+            arguments.append("--prune=false")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "watch.prune",
+                message: "Docker Compose --prune=false preserves dangling rebuild images; Container Compose preserves this intent until watch rebuild cleanup behavior is verified."
+            ))
+        }
+
+        if options.quiet {
+            arguments.append("--quiet")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "watch.quiet",
+                message: "Docker Compose --quiet hides build output; Container Compose preserves this output intent until watch build streaming is verified."
+            ))
+        }
+
+        let services = selectedOrderedServices(project.services, selectedServices: selectedServices)
+        arguments.append(contentsOf: services.map(\.name))
+
+        for service in services where service.develop?.watch.isEmpty == false {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "services.\(service.name).develop.watch",
+                message: "Service develop.watch rules are preserved in the Compose model, but Container Compose does not execute watch sync, rebuild, restart, or sync+exec workflows yet."
+            ))
+        }
+
+        return [
+            PlannedCommand(
+                action: .watchProject,
                 arguments: arguments,
                 diagnostics: diagnostics
             )
