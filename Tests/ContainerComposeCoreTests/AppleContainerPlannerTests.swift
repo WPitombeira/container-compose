@@ -3157,6 +3157,43 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansVolumesCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx"),
+                ComposeService(name: "db", image: "postgres")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planVolumes(
+            project: project,
+            services: ["web"],
+            options: .init(format: "json", quiet: true)
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .listVolumes)
+        XCTAssertNil(commands[0].service)
+        XCTAssertEqual(commands[0].arguments, [
+            "volume",
+            "list",
+            "--format", "json",
+            "--quiet",
+            "web"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "volumes"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "volumes.services"
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

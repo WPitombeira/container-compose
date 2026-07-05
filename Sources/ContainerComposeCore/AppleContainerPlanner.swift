@@ -6,6 +6,7 @@ public enum PlanAction: String, Codable, Sendable {
     case pullImage
     case pushImage
     case listImages
+    case listVolumes
     case createNetwork
     case createVolume
     case createService
@@ -315,7 +316,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .listVolumes, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -324,7 +325,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .listVolumes, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -333,7 +334,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .listVolumes, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -618,6 +619,19 @@ public struct AppleContainerProjectListOptions: Codable, Equatable, Sendable {
     ) {
         self.all = all
         self.filters = filters
+        self.format = format
+        self.quiet = quiet
+    }
+}
+
+public struct AppleContainerVolumesOptions: Codable, Equatable, Sendable {
+    public var format: String
+    public var quiet: Bool
+
+    public init(
+        format: String = "table",
+        quiet: Bool = false
+    ) {
         self.format = format
         self.quiet = quiet
     }
@@ -1702,6 +1716,47 @@ public struct AppleContainerPlanner: Sendable {
         return [
             PlannedCommand(
                 action: .listProjects,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planVolumes(
+        project: ComposeProject,
+        services selectedServices: [String] = [],
+        options: AppleContainerVolumesOptions = .init()
+    ) -> [PlannedCommand] {
+        var arguments = ["volume", "list"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "volumes",
+                message: "Docker Compose volumes lists project volumes, but Apple Container project-scoped volume listing is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if !options.format.isEmpty {
+            arguments.append(contentsOf: ["--format", options.format])
+        }
+
+        if options.quiet {
+            arguments.append("--quiet")
+        }
+
+        let services = selectedOrderedServices(project.services, selectedServices: selectedServices)
+        if !services.isEmpty {
+            arguments.append(contentsOf: services.map(\.name))
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "volumes.services",
+                message: "Docker Compose SERVICE filters are preserved for volume-list intent, but Apple Container service-scoped volume filtering is unavailable or unverified."
+            ))
+        }
+
+        return [
+            PlannedCommand(
+                action: .listVolumes,
                 arguments: arguments,
                 diagnostics: diagnostics
             )

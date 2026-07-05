@@ -165,6 +165,7 @@ container-compose commit --message snapshot web example/web:snapshot
 container-compose export -o web.tar web
 container-compose events --json --since 1h web
 container-compose watch --no-up web
+container-compose volumes --format json web
 container-compose publish --app example/app:latest
 container-compose rm --stop web
 container-compose exec web sh
@@ -215,5 +216,7 @@ Diagnostics are part of the product. Container Compose should warn when Compose 
 `container-compose publish [OPTIONS] REPOSITORY[:TAG]` preserves Docker Compose's OCI application publication intent, including `--app`, `--oci-version`, `--resolve-image-digests`, `--with-env`, and `-y/--yes`. Execution is blocked before invoking Apple Container until registry packaging, image digest resolution, and environment inclusion behavior are verified.
 
 `container-compose ls [OPTIONS]` preserves Docker Compose's runtime project-list intent and does not require a Compose file in the current directory. It accepts `--all`, repeated `--filter`, `--format table|json`, and `--quiet`, but remains diagnostic-only until Apple Container project metadata discovery is verified.
+
+`container-compose volumes [OPTIONS] [SERVICE...]` preserves Docker Compose's project volume-list intent, including `--format`, `--quiet`, and service filters. Execution is blocked before invoking Apple Container until project-scoped and service-scoped volume discovery is verified.
 
 `container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

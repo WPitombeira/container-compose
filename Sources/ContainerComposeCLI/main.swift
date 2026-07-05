@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Publish.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Watch.self, Ls.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Publish.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Watch.self, Ls.self, Volumes.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -58,6 +58,7 @@ struct ComposeOptions: ParsableArguments {
         watchOptions: AppleContainerWatchOptions = .init(),
         publishOptions: AppleContainerPublishOptions = .init(),
         projectListOptions: AppleContainerProjectListOptions = .init(),
+        volumesOptions: AppleContainerVolumesOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -105,6 +106,7 @@ struct ComposeOptions: ParsableArguments {
             watchOptions: watchOptions,
             publishOptions: publishOptions,
             projectListOptions: projectListOptions,
+            volumesOptions: volumesOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -1097,6 +1099,36 @@ struct Ls: ParsableCommand {
             )
         ))
         try execute(result.plan, dryRun: true, json: false, enforceReadiness: true)
+    }
+}
+
+struct Volumes: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose volume-list intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Option(name: .customLong("format"), help: "Output format for volume listing intent. Docker Compose supports table, table templates, json, and custom templates.")
+    var format = "table"
+
+    @Flag(name: [.short, .customLong("quiet")], help: "Only display volume names.")
+    var quiet = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Optional service names used to scope volume listing.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .volumes,
+            services: services,
+            volumesOptions: .init(
+                format: format,
+                quiet: quiet
+            )
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }
 
