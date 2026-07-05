@@ -3052,6 +3052,80 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansPublishCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planPublish(
+            project: project,
+            options: .init(
+                app: true,
+                ociVersion: "1.1",
+                resolveImageDigests: true,
+                withEnvironment: true,
+                yes: true,
+                repository: "example/app:latest"
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .publishProject)
+        XCTAssertNil(commands[0].service)
+        XCTAssertEqual(commands[0].arguments, [
+            "publish",
+            "--app",
+            "--oci-version", "1.1",
+            "--resolve-image-digests",
+            "--with-env",
+            "--yes",
+            "example/app:latest"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "publish"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "publish.app"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "publish.oci_version"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "publish.resolve_image_digests"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "publish.with_env"
+        })
+    }
+
+    func testPlansPublishWithoutRepositoryAsValidationDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planPublish(project: project)
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .publishProject)
+        XCTAssertEqual(commands[0].arguments, ["publish"])
+        XCTAssertEqual(commands[0].diagnostics.last?.severity, .error)
+        XCTAssertEqual(commands[0].diagnostics.last?.path, "publish.repository")
+    }
+
     func testPlansProjectListCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
         let commands = AppleContainerPlanner().planProjectList(options: .init(
             all: true,

@@ -6,7 +6,7 @@ Container Compose is early-stage infrastructure for a Docker Compose-like workfl
 
 - SwiftPM package with `ContainerComposeCore` and the `container-compose` executable.
 - Compose YAML discovery, interpolation, ordered file merge, `include`, `extends`, profiles, and normalized config output.
-- Apple Container planning, model lookups, and diagnostic placeholders for the core local-development lifecycle: build, pull, push, up, run, create, down, start, stop, restart, kill, pause, unpause, attach, wait, scale, commit, export, events, watch, ls, rm, exec, cp, port, logs, ps, top, stats, images, config, convert, compatibility, and doctor.
+- Apple Container planning, model lookups, and diagnostic placeholders for the core local-development lifecycle: build, pull, push, publish, up, run, create, down, start, stop, restart, kill, pause, unpause, attach, wait, scale, commit, export, events, watch, ls, rm, exec, cp, port, logs, ps, top, stats, images, config, convert, compatibility, and doctor.
 - Public integration surface for Container Desktop through `ContainerComposeService`, desktop snapshots, execution reports, runtime status, and injected executors.
 - MIT-licensed open-source repository with contributor and development docs.
 

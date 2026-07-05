@@ -23,6 +23,7 @@ public enum PlanAction: String, Codable, Sendable {
     case exportService
     case eventsProject
     case watchProject
+    case publishProject
     case listProjects
     case execService
     case copyService
@@ -314,7 +315,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -323,7 +324,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -332,7 +333,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .watchProject, .publishProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -575,6 +576,31 @@ public struct AppleContainerWatchOptions: Codable, Equatable, Sendable {
         self.noUp = noUp
         self.prune = prune
         self.quiet = quiet
+    }
+}
+
+public struct AppleContainerPublishOptions: Codable, Equatable, Sendable {
+    public var app: Bool
+    public var ociVersion: String?
+    public var resolveImageDigests: Bool
+    public var withEnvironment: Bool
+    public var yes: Bool
+    public var repository: String?
+
+    public init(
+        app: Bool = false,
+        ociVersion: String? = nil,
+        resolveImageDigests: Bool = false,
+        withEnvironment: Bool = false,
+        yes: Bool = false,
+        repository: String? = nil
+    ) {
+        self.app = app
+        self.ociVersion = ociVersion
+        self.resolveImageDigests = resolveImageDigests
+        self.withEnvironment = withEnvironment
+        self.yes = yes
+        self.repository = repository
     }
 }
 
@@ -1549,6 +1575,86 @@ public struct AppleContainerPlanner: Sendable {
         return [
             PlannedCommand(
                 action: .watchProject,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planPublish(
+        project _: ComposeProject,
+        options: AppleContainerPublishOptions = .init()
+    ) -> [PlannedCommand] {
+        var arguments = ["publish"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "publish",
+                message: "Docker Compose publish packages and publishes the Compose application as an OCI artifact, but Apple Container application publication support is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if options.app {
+            arguments.append("--app")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "publish.app",
+                message: "Docker Compose --app includes referenced images in the published application; Container Compose preserves this intent until OCI application packaging behavior is verified."
+            ))
+        }
+
+        if let ociVersion = options.ociVersion, !ociVersion.isEmpty {
+            arguments.append(contentsOf: ["--oci-version", ociVersion])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "publish.oci_version",
+                message: "Docker Compose --oci-version selects the OCI image or artifact specification version; Container Compose preserves this value until OCI artifact publishing is verified."
+            ))
+        }
+
+        if options.resolveImageDigests {
+            arguments.append("--resolve-image-digests")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "publish.resolve_image_digests",
+                message: "Docker Compose --resolve-image-digests pins image tags to digests; Container Compose preserves this intent until registry digest resolution is verified."
+            ))
+        }
+
+        if options.withEnvironment {
+            arguments.append("--with-env")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "publish.with_env",
+                message: "Docker Compose --with-env includes environment variables in the published OCI artifact; Container Compose preserves this intent without exposing or uploading environment values."
+            ))
+        }
+
+        if options.yes {
+            arguments.append("--yes")
+        }
+
+        guard let repository = options.repository, !repository.isEmpty else {
+            return [
+                PlannedCommand(
+                    action: .publishProject,
+                    arguments: arguments,
+                    diagnostics: diagnostics + [
+                        .init(
+                            severity: .error,
+                            path: "publish.repository",
+                            message: "Publish planning requires a target repository or repository:tag."
+                        )
+                    ]
+                )
+            ]
+        }
+
+        arguments.append(repository)
+
+        return [
+            PlannedCommand(
+                action: .publishProject,
                 arguments: arguments,
                 diagnostics: diagnostics
             )

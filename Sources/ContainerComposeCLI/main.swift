@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Watch.self, Ls.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Publish.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Export.self, Events.self, Watch.self, Ls.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -56,6 +56,7 @@ struct ComposeOptions: ParsableArguments {
         exportOptions: AppleContainerExportOptions = .init(),
         eventsOptions: AppleContainerEventsOptions = .init(),
         watchOptions: AppleContainerWatchOptions = .init(),
+        publishOptions: AppleContainerPublishOptions = .init(),
         projectListOptions: AppleContainerProjectListOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
@@ -102,6 +103,7 @@ struct ComposeOptions: ParsableArguments {
             exportOptions: exportOptions,
             eventsOptions: eventsOptions,
             watchOptions: watchOptions,
+            publishOptions: publishOptions,
             projectListOptions: projectListOptions,
             copySource: copySource,
             copyDestination: copyDestination,
@@ -635,6 +637,48 @@ struct Push: ParsableCommand {
             pushOptions: pushOptions
         ))
         try execute(result.plan, dryRun: dryRun, json: json)
+    }
+}
+
+struct Publish: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose publish intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(name: .customLong("app"), help: "Publish the Compose application including referenced images.")
+    var app = false
+
+    @Option(name: .customLong("oci-version"), help: "OCI image or artifact specification version.")
+    var ociVersion: String?
+
+    @Flag(name: .customLong("resolve-image-digests"), help: "Pin image tags to digests.")
+    var resolveImageDigests = false
+
+    @Flag(name: .customLong("with-env"), help: "Include environment variables in the published OCI artifact.")
+    var withEnvironment = false
+
+    @Flag(name: [.short, .customLong("yes")], help: "Assume yes as answer to all prompts.")
+    var yes = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Target repository or repository:tag.")
+    var repository: String
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .publish,
+            publishOptions: .init(
+                app: app,
+                ociVersion: ociVersion,
+                resolveImageDigests: resolveImageDigests,
+                withEnvironment: withEnvironment,
+                yes: yes,
+                repository: repository
+            )
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }
 

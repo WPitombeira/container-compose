@@ -6,7 +6,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 1. `ContainerComposeCLI`
    - ArgumentParser executable.
-   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `images`, `stop`, `restart`, `kill`, `pause`, `unpause`, `attach`, `wait`, `scale`, `commit`, `export`, `events`, `watch`, `ls`, `rm`, `exec`, `cp`, `logs`, `ps`, `top`, and `stats`.
+   - Owns user-facing commands: `config`, `plan`, `up`, `run`, `create`, `build`, `down`, `start`, `pull`, `push`, `publish`, `images`, `stop`, `restart`, `kill`, `pause`, `unpause`, `attach`, `wait`, `scale`, `commit`, `export`, `events`, `watch`, `ls`, `rm`, `exec`, `cp`, `logs`, `ps`, `top`, and `stats`.
    - Executes `container` only after showing or building a command plan.
    - Ships as a SwiftPM executable that can be installed to a user-selected `PREFIX/bin`.
 
@@ -22,7 +22,7 @@ Container Compose follows the same package-first SwiftPM approach as `container-
 
 3. Apple Container runtime
    - Invoked as `container <arguments>`.
-   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`. Pause, unpause, attach, wait, scale, commit, export, events, watch, and ls are diagnostic-only until Apple Container behavior is verified.
+   - Current plan target uses `container image pull`, `container image push`, `container image list`, `container build`, `container network create`, `container volume create`, `container run`, `container create`, `container start`, `container stop`, `container kill`, `container exec`, `container copy`, `container delete`, `container logs`, `container list`, and `container stats`. Pause, unpause, attach, wait, scale, commit, export, events, watch, publish, and ls are diagnostic-only until Apple Container behavior is verified.
 
 ## Compose Compatibility Strategy
 
@@ -118,6 +118,7 @@ MVP behavior:
 - Accept `export [OPTIONS] SERVICE` and preserve Docker Compose service-filesystem archive intent, including replica index and output archive path. The execution runner treats export actions as unsupported before invoking Apple Container until tar stream and filesystem export semantics are verified.
 - Accept `events [OPTIONS] [SERVICE...]` and preserve Docker Compose project event-stream intent, including `--json`, `--since`, and `--until`. The CLI treats `events --json` as Docker event-output formatting, not as the generic Container Compose execution-report JSON flag.
 - Accept `watch [SERVICE...]` and preserve Docker Compose file-watch intent, including `--no-up`, `--prune`, `--quiet`, selected services, and service `develop.watch` rules. The execution runner treats watch actions as unsupported before invoking Apple Container until file sync, rebuild, restart, and `sync+exec` semantics are verified.
+- Accept `publish [OPTIONS] REPOSITORY[:TAG]` and preserve Docker Compose OCI application publication intent, including application-image inclusion, OCI spec version selection, image digest resolution, environment inclusion, and non-interactive confirmation. The execution runner treats publish actions as unsupported before invoking Apple Container until registry packaging semantics are verified.
 - Accept `ls [OPTIONS]` without loading a Compose file and preserve Docker Compose runtime project-list intent, including `--all`, repeated `--filter`, `--format table|json`, and `--quiet`. This uses a synthetic projectless plan until Apple Container project metadata discovery is verified.
 - Resolve `port` from the normalized Compose model instead of invoking Apple Container. `ComposePortResolver` maps `SERVICE PRIVATE_PORT` plus protocol to declared published host endpoints and emits an index diagnostic because static model resolution does not inspect runtime replica state.
 - Plan `top` as one `container exec <service-container> ps` command per selected service. Keep a command diagnostic because Docker Compose reports engine-side process information while Apple Container currently exposes a useful in-container process fallback through exec.

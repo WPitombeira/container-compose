@@ -1649,6 +1649,45 @@ final class ContainerComposeServiceTests: XCTestCase {
         } == true)
     }
 
+    func testFacadePlansPublishWithDiagnostic() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .publish,
+            projectDirectory: workdir.path,
+            projectName: "demo",
+            publishOptions: .init(
+                app: true,
+                ociVersion: "1.1",
+                resolveImageDigests: true,
+                withEnvironment: true,
+                yes: true,
+                repository: "example/app:latest"
+            )
+        ))
+
+        XCTAssertEqual(result.plan.operation, "publish")
+        XCTAssertEqual(result.plan.selectedServices, [])
+        XCTAssertEqual(result.plan.commands.map(\.action), [.publishProject])
+        XCTAssertEqual(result.plan.commands.first?.arguments, [
+            "publish",
+            "--app",
+            "--oci-version", "1.1",
+            "--resolve-image-digests",
+            "--with-env",
+            "--yes",
+            "example/app:latest"
+        ])
+        XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "publish")
+    }
+
     func testFacadePlansProjectListWithoutComposeFileDiscovery() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

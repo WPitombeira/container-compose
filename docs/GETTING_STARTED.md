@@ -165,6 +165,7 @@ container-compose commit --message snapshot web example/web:snapshot
 container-compose export -o web.tar web
 container-compose events --json --since 1h web
 container-compose watch --no-up web
+container-compose publish --app example/app:latest
 container-compose rm --stop web
 container-compose exec web sh
 container-compose cp web:/var/log/app.log ./app.log
@@ -210,6 +211,8 @@ Diagnostics are part of the product. Container Compose should warn when Compose 
 `container-compose events [OPTIONS] [SERVICE...]` preserves Docker Compose's project event-stream intent, including `--json`, `--since`, and `--until`. The `--json` flag belongs to the event stream format and does not request a Container Compose execution-report JSON envelope for this command.
 
 `container-compose watch [SERVICE...]` preserves Docker Compose's file-watch intent, including `--no-up`, `--prune`, `--quiet`, service filters, and any `develop.watch` rules in the active model. Execution is blocked before invoking Apple Container until file sync, rebuild, restart, and `sync+exec` behavior is verified.
+
+`container-compose publish [OPTIONS] REPOSITORY[:TAG]` preserves Docker Compose's OCI application publication intent, including `--app`, `--oci-version`, `--resolve-image-digests`, `--with-env`, and `-y/--yes`. Execution is blocked before invoking Apple Container until registry packaging, image digest resolution, and environment inclusion behavior are verified.
 
 `container-compose ls [OPTIONS]` preserves Docker Compose's runtime project-list intent and does not require a Compose file in the current directory. It accepts `--all`, repeated `--filter`, `--format table|json`, and `--quiet`, but remains diagnostic-only until Apple Container project metadata discovery is verified.
 
