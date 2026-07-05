@@ -153,4 +153,4 @@ Start with [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 Container Compose is open source under the [MIT License](LICENSE).
 
-Third-party references and dependency notices are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Docker Compose and compose-go are Apache-2.0 licensed behavioral references for this project; their source is not vendored or copied here. Third-party references, dependency notices, and Apache-2.0 compliance notes are tracked in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

@@ -2,6 +2,12 @@
 
 Container Compose is released under the MIT License. This file records third-party projects that influence, support, or are linked by the project.
 
+## Apache-2.0 Compliance Status
+
+Container Compose does not vendor, copy, translate, or modify Docker Compose or compose-go source code, tests, assets, or documentation text. Docker Compose and compose-go are used as behavioral compatibility references, and compatibility work should be based on independently written Swift code, observed CLI behavior, and the Compose Specification.
+
+Because the current repository does not redistribute Docker Compose or compose-go source or object code, Docker Compose's Apache-2.0 redistribution conditions are not triggered by the project source itself. If future work imports Apache-2.0 material, that change must preserve the upstream license, copyright notices, NOTICE attribution, and prominent notices for modified copied files before it is merged or released.
+
 ## Behavioral References
 
 Container Compose aims to provide Docker Compose-like workflows for Apple's `container` runtime. Docker Compose and compose-go are used as behavioral references for Compose file loading, merge behavior, profile handling, and CLI compatibility.

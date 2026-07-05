@@ -70,6 +70,7 @@ More development commands are listed in [DEVELOPMENT.md](DEVELOPMENT.md).
 Container Compose is MIT-licensed. Docker Compose, compose-go, and some Apple Swift package dependencies are Apache-2.0 licensed, so treat them carefully:
 
 - Use Docker Compose and compose-go as behavioral references unless maintainers explicitly approve importing source.
+- Write independent Swift implementations and tests from observed behavior or the Compose Specification instead of copying upstream source or fixtures.
 - Do not copy, translate, vendor, or modify Apache-2.0 source code without preserving required copyright, license, attribution, and NOTICE material.
 - If Apache-2.0 code is imported, update [../THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md), include the relevant Apache-2.0 license text and NOTICE attribution, and mark modified copied files as changed from the upstream source.
 - Record source provenance in the pull request when behavior is derived from Docker Compose tests, code, or documentation.
