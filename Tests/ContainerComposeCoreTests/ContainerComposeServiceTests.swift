@@ -1230,6 +1230,34 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "top")
     }
 
+    func testFacadeResolvesPublishedServicePort() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+            ports:
+              - "8080:80"
+              - target: 90
+                published: 9000
+                protocol: udp
+                host_ip: 127.0.0.1
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let resolution = try ContainerComposeService().resolvePort(
+            .init(projectDirectory: workdir.path, projectName: "demo"),
+            serviceName: "web",
+            privatePort: "90",
+            protocolValue: "udp"
+        )
+
+        XCTAssertEqual(resolution.endpoint, "127.0.0.1:9000")
+        XCTAssertEqual(resolution.service, "web")
+        XCTAssertEqual(resolution.protocolValue, "udp")
+    }
+
     func testFacadePlansPsForSelectedServicesRetainsMetadataAndCannotFilter() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

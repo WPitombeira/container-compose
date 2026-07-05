@@ -194,6 +194,7 @@ Remote includes stay behind the app-owned resolver. `ComposeLoader.RemoteInclude
 - `ComposeProject`: normalized Compose model for outline/detail views.
 - `ComposeProject.remoteIncludes`: remote include provenance and app-supplied cache metadata.
 - `ContainerComposeVersionInfo`: tool, command, package, runtime target, integration surface, and schema-version metadata.
+- `ComposePortResolution`: static published-port lookup results for Compose `port` style UI affordances.
 - `AppleContainerPlan`: schema-versioned command plan for previews and persistence.
 - `AppleContainerRuntimeStatus`: optional runtime availability, resolved executable path, version text, and typed issue codes for app banners.
 - `PlannedCommand.generatedFiles`: app-materialized files such as inline Dockerfiles needed before running a planned Apple Container command.

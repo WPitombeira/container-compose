@@ -55,7 +55,7 @@ public struct ComposeCompatibilityMatrix: Codable, Equatable, Sendable {
             .init(composePath: "services.*.environment", status: .mapped, area: .planner, note: "Mapped to repeated Apple Container environment arguments."),
             .init(composePath: "services.*.env_file", status: .mapped, area: .planner, note: "String and long syntax are preserved; optional missing files are skipped and non-default formats warn."),
             .init(composePath: "services.*.extends", status: .mapped, area: .loader, note: "Same-file and file-based service inheritance is resolved before service parsing."),
-            .init(composePath: "services.*.ports", status: .mapped, area: .planner, note: "Mapped to Apple Container publish arguments using Compose merge keys."),
+            .init(composePath: "services.*.ports", status: .mapped, area: .planner, note: "Mapped to Apple Container publish arguments using Compose merge keys and used for static Compose port lookups."),
             .init(composePath: "services.*.expose", status: .preservedDiagnostic, area: .planner, note: "Preserved as internal-only ports without publishing host ports."),
             .init(composePath: "services.*.volumes", status: .mapped, area: .planner, note: "Bind and named-volume references are planned as Apple Container volume arguments where supported."),
             .init(composePath: "services.*.volumes_from", status: .preservedDiagnostic, area: .planner, note: "Service references contribute startup dependencies; volume inheritance remains diagnostic-only."),

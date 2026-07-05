@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -878,6 +878,40 @@ struct Logs: ParsableCommand {
             tail: tail
         ))
         try execute(result.plan, dryRun: dryRun, json: json)
+    }
+}
+
+struct Port: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Print the published host endpoint for a service port.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Option(name: .customLong("index"), help: "Replica index for the service container.")
+    var index = 1
+
+    @Option(name: .customLong("protocol"), help: "Port protocol. Values: tcp or udp.")
+    var protocolValue = "tcp"
+
+    @Argument(help: "Service name to inspect.")
+    var service: String
+
+    @Argument(help: "Private service port to resolve.")
+    var privatePort: String
+
+    func run() throws {
+        do {
+            let resolution = try ContainerComposeService().resolvePort(
+                try options.makeRequest(operation: .port, services: [service]),
+                serviceName: service,
+                privatePort: privatePort,
+                protocolValue: protocolValue,
+                replicaIndex: index
+            )
+            printDiagnostics(resolution.diagnostics)
+            print(resolution.endpoint)
+        } catch let error as ComposePortResolutionError {
+            throw ValidationError(error.localizedDescription)
+        }
     }
 }
 

@@ -18,6 +18,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case rm
     case exec
     case cp
+    case port
     case logs
     case ps
     case top
@@ -243,6 +244,23 @@ public struct ContainerComposeService: Sendable {
         )
     }
 
+    public func resolvePort(
+        _ request: ContainerComposePlanRequest,
+        serviceName: String,
+        privatePort: String,
+        protocolValue: String = "tcp",
+        replicaIndex: Int = 1
+    ) throws -> ComposePortResolution {
+        let project = try loadProject(request)
+        return try ComposePortResolver().resolve(
+            project: project,
+            serviceName: serviceName,
+            privatePort: privatePort,
+            protocolValue: protocolValue,
+            replicaIndex: replicaIndex
+        )
+    }
+
     public func runtimeStatus(
         using probe: AppleContainerRuntimeProbing = AppleContainerRuntimeProbe()
     ) -> AppleContainerRuntimeStatus {
@@ -297,7 +315,7 @@ public struct ContainerComposeService: Sendable {
     ) -> [PlannedCommand] {
         let planner = AppleContainerPlanner()
         switch operation {
-        case .config:
+        case .config, .port:
             return []
         case .plan, .up:
             return planner.planUp(project: project, detach: request.detach, services: request.services)
@@ -474,7 +492,7 @@ public struct ContainerComposeService: Sendable {
 
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .rm, .exec, .cp, .logs, .ps, .top, .stats:
+        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
         case .config, .down:
             return false

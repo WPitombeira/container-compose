@@ -157,6 +157,7 @@ container-compose kill --signal SIGINT web
 container-compose rm --stop web
 container-compose exec web sh
 container-compose cp web:/var/log/app.log ./app.log
+container-compose port web 80
 container-compose logs --follow web
 container-compose ps web
 container-compose top web
@@ -178,5 +179,7 @@ container-compose down --volumes
 - Optional execution graph and readiness metadata.
 
 Diagnostics are part of the product. Container Compose should warn when Compose behavior is preserved but not yet mapped to Apple Container, and error when a Compose file is contradictory or invalid.
+
+`container-compose port SERVICE PRIVATE_PORT` resolves the declared Compose published port from the normalized model. It supports `--protocol` and `--index`, but `--index` emits a diagnostic because static Compose resolution does not inspect per-replica runtime state.
 
 `container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

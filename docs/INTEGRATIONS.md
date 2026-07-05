@@ -75,6 +75,7 @@ Use:
 - `makePlan(_:)` for command previews.
 - `makeDesktopSnapshot(_:)` for UI-ready command rows.
 - `dryRun(_:)` and `dryRunDesktopSnapshot(_:)` for planned execution reports without invoking Apple Container.
+- `resolvePort(_:serviceName:privatePort:protocolValue:replicaIndex:)` for Compose `port` lookups from the normalized model.
 - `runtimeStatus()` for availability banners and executable discovery.
 - `ContainerComposeMetadata.currentVersionInfo` for tool and schema compatibility checks.
 - `execute(...)` with injected executors when the caller owns process execution.
