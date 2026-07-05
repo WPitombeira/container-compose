@@ -67,6 +67,7 @@ struct ComposeOptions: ParsableArguments {
         runOptions: AppleContainerRunOptions = .init(),
         createOptions: AppleContainerCreateOptions = .init(),
         emitReadinessChecks: Bool = false,
+        interpolate: Bool = true,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         standardInput: FileHandle = .standardInput
     ) throws -> ContainerComposePlanRequest {
@@ -83,6 +84,7 @@ struct ComposeOptions: ParsableArguments {
             profiles: Set(profiles),
             environment: environment,
             composeEnvFiles: envFiles,
+            interpolate: interpolate,
             allowRemoteIncludes: allowRemoteIncludes,
             emitReadinessChecks: emitReadinessChecks,
             detach: detach,
@@ -148,7 +150,7 @@ struct Config: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        let request = try options.makeRequest(operation: .config)
+        let request = try options.makeRequest(operation: .config, interpolate: !renderOptions.noInterpolate)
         let project = try ContainerComposeService().loadProject(request)
         try renderOptions.render(
             project: project,
@@ -166,7 +168,7 @@ struct Convert: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        let request = try options.makeRequest(operation: .convert)
+        let request = try options.makeRequest(operation: .convert, interpolate: !renderOptions.noInterpolate)
         let project = try ContainerComposeService().loadProject(request)
         try renderOptions.render(
             project: project,
@@ -299,6 +301,9 @@ struct ConfigRenderOptions: ParsableArguments {
 
     @Option(name: .customLong("hash"), help: "Print a service config hash. Use '*' to print all service hashes.")
     var hash: String?
+
+    @Flag(name: .customLong("no-interpolate"), help: "Do not interpolate environment variables before rendering the model.")
+    var noInterpolate = false
 
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false

@@ -1,0 +1,7 @@
+name: container-compose-no-interpolate
+
+services:
+  web:
+    image: "${WEB_IMAGE:-nginx}:${WEB_TAG:-alpine}"
+    environment:
+      LOG_LEVEL: "${LOG_LEVEL}"

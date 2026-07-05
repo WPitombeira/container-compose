@@ -49,6 +49,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var profiles: Set<String>
     public var environment: [String: String]
     public var composeEnvFiles: [String]
+    public var interpolate: Bool
     public var allowRemoteIncludes: Bool
     public var emitReadinessChecks: Bool
     public var runtimeStatus: AppleContainerRuntimeStatus?
@@ -93,6 +94,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         profiles: Set<String> = [],
         environment: [String: String] = ProcessInfo.processInfo.environment,
         composeEnvFiles: [String] = [],
+        interpolate: Bool = true,
         allowRemoteIncludes: Bool = false,
         emitReadinessChecks: Bool = false,
         runtimeStatus: AppleContainerRuntimeStatus? = nil,
@@ -136,6 +138,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.profiles = profiles
         self.environment = environment
         self.composeEnvFiles = composeEnvFiles
+        self.interpolate = interpolate
         self.allowRemoteIncludes = allowRemoteIncludes
         self.emitReadinessChecks = emitReadinessChecks
         self.runtimeStatus = runtimeStatus
@@ -204,6 +207,7 @@ public struct ContainerComposeService: Sendable {
             loader = ComposeLoader(
                 environment: request.environment,
                 envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles,
+                interpolate: request.interpolate,
                 allowRemoteIncludes: request.allowRemoteIncludes,
                 remoteIncludeResolver: remoteIncludeResolver
             )
@@ -211,6 +215,7 @@ public struct ContainerComposeService: Sendable {
             loader = ComposeLoader(
                 environment: request.environment,
                 envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles,
+                interpolate: request.interpolate,
                 allowRemoteIncludes: request.allowRemoteIncludes,
                 remoteIncludeFetcher: remoteIncludeFetcher
             )

@@ -126,6 +126,28 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first { $0.action == .runService }?.arguments.last, "nginx:alpine")
     }
 
+    func testFacadeCanPreviewInMemoryComposeYAMLWithoutInterpolation() throws {
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .config,
+            composeYAML: """
+            services:
+              web:
+                image: ${IMAGE:-nginx:alpine}
+                environment:
+                  LOG_LEVEL: ${LOG_LEVEL}
+            """,
+            projectDirectory: "/tmp/pasted",
+            interpolate: false
+        ))
+
+        let web = try XCTUnwrap(result.project.services.first)
+        XCTAssertEqual(web.image, "${IMAGE:-nginx:alpine}")
+        XCTAssertEqual(web.environment["LOG_LEVEL"], "${LOG_LEVEL}")
+        XCTAssertFalse(result.project.diagnostics.contains { $0.path == "environment.LOG_LEVEL" })
+        XCTAssertEqual(result.plan.operation, "config")
+        XCTAssertEqual(result.plan.commands, [])
+    }
+
     func testInMemoryComposeYAMLResolvesLongSyntaxIncludeProjectDirectoryAndEnvFile() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

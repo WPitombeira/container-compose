@@ -4512,6 +4512,27 @@ final class ComposeLoaderTests: XCTestCase {
         })
     }
 
+    func testLoaderCanSkipInterpolationForConfigRendering() throws {
+        let yaml = """
+        services:
+          web:
+            image: nginx:${TAG}
+            environment:
+              STATIC: ${VALUE:-fallback}
+          worker:
+            image: ${WORKER_IMAGE}
+        """
+
+        let project = try ComposeLoader(interpolate: false).load(yaml: yaml, sourcePath: "/tmp/demo/compose.yaml")
+        let web = try XCTUnwrap(project.services.first { $0.name == "web" })
+        let worker = try XCTUnwrap(project.services.first { $0.name == "worker" })
+
+        XCTAssertEqual(web.image, "nginx:${TAG}")
+        XCTAssertEqual(web.environment["STATIC"], "${VALUE:-fallback}")
+        XCTAssertEqual(worker.image, "${WORKER_IMAGE}")
+        XCTAssertFalse(project.diagnostics.contains { $0.path.hasPrefix("environment.") })
+    }
+
     func testInterpolationDoesNotChangeMappingKeys() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

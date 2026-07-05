@@ -55,6 +55,7 @@ public struct ComposeLoader: Sendable {
 
     private let environment: [String: String]
     private let envFiles: [String]?
+    private let interpolate: Bool
     private let remoteIncludeResolver: RemoteIncludeResolver
     private let allowRemoteIncludes: Bool
 
@@ -75,11 +76,13 @@ public struct ComposeLoader: Sendable {
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         envFiles: [String]? = nil,
+        interpolate: Bool = true,
         allowRemoteIncludes: Bool = false,
         remoteIncludeFetcher: RemoteIncludeFetcher? = nil
     ) {
         self.environment = environment
         self.envFiles = envFiles
+        self.interpolate = interpolate
         self.allowRemoteIncludes = allowRemoteIncludes
         let fetcher = remoteIncludeFetcher ?? { url in
             try Self.fetchRemoteInclude(from: url)
@@ -92,11 +95,13 @@ public struct ComposeLoader: Sendable {
     public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         envFiles: [String]? = nil,
+        interpolate: Bool = true,
         allowRemoteIncludes: Bool = false,
         remoteIncludeResolver: @escaping RemoteIncludeResolver
     ) {
         self.environment = environment
         self.envFiles = envFiles
+        self.interpolate = interpolate
         self.allowRemoteIncludes = allowRemoteIncludes
         self.remoteIncludeResolver = remoteIncludeResolver
     }
@@ -202,11 +207,6 @@ public struct ComposeLoader: Sendable {
         diagnostics: inout [ComposeDiagnostic],
         envFiles: [String]? = nil
     ) throws -> [String: Any] {
-        let resolver = EnvironmentResolver(
-            workingDirectory: environmentWorkingDirectory(for: sourcePath),
-            environment: environment,
-            envFiles: envFiles ?? self.envFiles
-        )
         guard let rawNode = try Yams.compose(yaml: yaml) else {
             throw ComposeLoadError.invalidRoot
         }
@@ -214,6 +214,14 @@ public struct ComposeLoader: Sendable {
         guard let root = raw as? [String: Any] else {
             throw ComposeLoadError.invalidRoot
         }
+        guard interpolate else {
+            return root
+        }
+        let resolver = EnvironmentResolver(
+            workingDirectory: environmentWorkingDirectory(for: sourcePath),
+            environment: environment,
+            envFiles: envFiles ?? self.envFiles
+        )
         guard let interpolatedRoot = try interpolateParsedValue(root, resolver: resolver, diagnostics: &diagnostics) as? [String: Any] else {
             throw ComposeLoadError.invalidRoot
         }
