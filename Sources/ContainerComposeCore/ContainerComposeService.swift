@@ -2,6 +2,7 @@ import Foundation
 
 public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case config
+    case convert
     case plan
     case up
     case run
@@ -315,7 +316,7 @@ public struct ContainerComposeService: Sendable {
     ) -> [PlannedCommand] {
         let planner = AppleContainerPlanner()
         switch operation {
-        case .config, .port:
+        case .config, .convert, .port:
             return []
         case .plan, .up:
             return planner.planUp(project: project, detach: request.detach, services: request.services)
@@ -494,7 +495,7 @@ public struct ContainerComposeService: Sendable {
         switch operation {
         case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
-        case .config, .down:
+        case .config, .convert, .down:
             return false
         }
     }

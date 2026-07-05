@@ -1108,6 +1108,28 @@ final class ContainerComposeServiceTests: XCTestCase {
         })
     }
 
+    func testFacadeConvertLoadsModelWithoutPlanningRuntimeCommands() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .convert,
+            projectDirectory: workdir.path,
+            projectName: "demo"
+        ))
+
+        XCTAssertEqual(result.project.services.map(\.name), ["web"])
+        XCTAssertEqual(result.plan.operation, "convert")
+        XCTAssertEqual(result.plan.commands, [])
+        XCTAssertEqual(result.plan.selectedServices, [])
+    }
+
     func testFacadeDownCanRemoveNetworksAndOptInVolumes() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

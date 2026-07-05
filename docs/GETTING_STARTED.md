@@ -135,6 +135,7 @@ Later env files override earlier env files. Process environment variables still 
 
 ```sh
 container-compose config
+container-compose convert --format yaml
 container-compose config --format yaml
 container-compose config --services
 container-compose config --images
@@ -168,6 +169,8 @@ container-compose down --volumes
 ## Plans and Diagnostics
 
 `container-compose version --format json` emits the tool version plus the current plan, execution-report, execution-graph, and runtime-status schema versions.
+
+`container-compose convert` is a Docker Compose-compatible alias for rendering the normalized model. It shares the same projection flags as `config`, including `--services`, `--images`, `--profiles`, `--networks`, `--volumes`, `--format`, `--output`, and `--quiet`.
 
 `container-compose plan` emits a versioned JSON envelope containing:
 

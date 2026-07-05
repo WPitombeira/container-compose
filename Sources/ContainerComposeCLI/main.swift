@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -31,8 +31,8 @@ struct ComposeOptions: ParsableArguments {
     @Flag(name: .customLong("allow-remote-includes"), help: "Allow Compose include entries to fetch http and https resources.")
     var allowRemoteIncludes = false
 
-    func loadProject() throws -> ComposeProject {
-        try ContainerComposeService().loadProject(makeRequest(operation: .config))
+    func loadProject(operation: ContainerComposeOperation = .config) throws -> ComposeProject {
+        try ContainerComposeService().loadProject(makeRequest(operation: operation))
     }
 
     func makeRequest(
@@ -123,7 +123,25 @@ struct Config: ParsableCommand {
     static let configuration = CommandConfiguration(abstract: "Print the normalized Container Compose model or config projections.")
 
     @OptionGroup var options: ComposeOptions
+    @OptionGroup var renderOptions: ConfigRenderOptions
 
+    func run() throws {
+        try renderOptions.render(project: try options.loadProject(), commandName: "config")
+    }
+}
+
+struct Convert: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Convert the Compose model to Container Compose's canonical normalized format.")
+
+    @OptionGroup var options: ComposeOptions
+    @OptionGroup var renderOptions: ConfigRenderOptions
+
+    func run() throws {
+        try renderOptions.render(project: try options.loadProject(operation: .convert), commandName: "convert")
+    }
+}
+
+struct ConfigRenderOptions: ParsableArguments {
     @Flag(name: .customLong("services"), help: "Print service names, one per line.")
     var services = false
 
@@ -148,13 +166,12 @@ struct Config: ParsableCommand {
     @Option(name: [.short, .customLong("output")], help: "Write config output to a file instead of stdout.")
     var output: String?
 
-    func run() throws {
-        let project = try options.loadProject()
+    func render(project: ComposeProject, commandName: String) throws {
         let renderFormat = try ComposeConfigRenderer.parseFormat(format)
         if quiet {
             return
         }
-        if let projectionMode = try selectedProjectionMode() {
+        if let projectionMode = try selectedProjectionMode(commandName: commandName) {
             let text = ComposeConfigProjection.values(for: projectionMode, in: project).joined(separator: "\n") + "\n"
             try writeConfigOutput(text)
             return
@@ -163,7 +180,7 @@ struct Config: ParsableCommand {
         try writeConfigOutput(text)
     }
 
-    private func selectedProjectionMode() throws -> ComposeConfigProjectionMode? {
+    private func selectedProjectionMode(commandName: String) throws -> ComposeConfigProjectionMode? {
         let selected: [(Bool, ComposeConfigProjectionMode)] = [
             (services, .services),
             (images, .images),
@@ -175,7 +192,7 @@ struct Config: ParsableCommand {
             isSelected ? mode : nil
         }
         guard modes.count <= 1 else {
-            throw ValidationError("config accepts only one projection flag at a time")
+            throw ValidationError("\(commandName) accepts only one projection flag at a time")
         }
         return modes.first
     }
