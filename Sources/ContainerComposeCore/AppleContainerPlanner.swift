@@ -15,6 +15,7 @@ public enum PlanAction: String, Codable, Sendable {
     case restartService
     case killService
     case pauseService
+    case unpauseService
     case execService
     case copyService
     case logsService
@@ -305,7 +306,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -314,7 +315,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -323,7 +324,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -935,6 +936,23 @@ public struct AppleContainerPlanner: Sendable {
                         severity: .warning,
                         path: "pause",
                         message: "Docker Compose pause suspends running service containers, but Apple Container pause support is unavailable or unverified; this planned action is not executable yet."
+                    )
+                ]
+            )
+        }
+    }
+
+    public func planUnpause(project: ComposeProject, services selectedServices: [String] = []) -> [PlannedCommand] {
+        selectedOrderedServices(project.services, selectedServices: selectedServices).map { service in
+            PlannedCommand(
+                action: .unpauseService,
+                service: service.name,
+                arguments: ["unpause", containerName(project: project.name, service: service)],
+                diagnostics: [
+                    .init(
+                        severity: .warning,
+                        path: "unpause",
+                        message: "Docker Compose unpause resumes paused service containers, but Apple Container unpause support is unavailable or unverified; this planned action is not executable yet."
                     )
                 ]
             )

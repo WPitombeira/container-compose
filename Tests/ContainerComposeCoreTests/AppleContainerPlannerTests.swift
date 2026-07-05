@@ -2645,6 +2645,34 @@ final class AppleContainerPlannerTests: XCTestCase {
         })
     }
 
+    func testPlansUnpauseCommandsWithUnsupportedRuntimeDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx", dependsOn: ["db"]),
+                ComposeService(name: "db", image: "postgres", containerName: "database")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planUnpause(project: project, services: ["db", "web"])
+
+        XCTAssertEqual(commands.count, 2)
+        XCTAssertEqual(commands[0].action, .unpauseService)
+        XCTAssertEqual(commands[0].service, "db")
+        XCTAssertEqual(commands[0].arguments, ["unpause", "database"])
+        XCTAssertEqual(commands[1].action, .unpauseService)
+        XCTAssertEqual(commands[1].service, "web")
+        XCTAssertEqual(commands[1].arguments, ["unpause", "demo_web_1"])
+        XCTAssertTrue(commands.allSatisfy { command in
+            command.diagnostics.contains {
+                $0.severity == .warning
+                && $0.path == "unpause"
+                && $0.message.contains("not executable yet")
+            }
+        })
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

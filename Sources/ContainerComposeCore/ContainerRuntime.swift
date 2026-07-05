@@ -760,7 +760,7 @@ public struct AppleContainerExecutionRunner {
     }
 
     private func unsupportedPlanActionExecution(commandIndex: Int, command: PlannedCommand) -> PlannedCommandExecution? {
-        guard command.action == .delegateService || command.action == .pauseService else { return nil }
+        guard command.action == .delegateService || command.action == .pauseService || command.action == .unpauseService else { return nil }
         return PlannedCommandExecution(
             commandIndex: commandIndex,
             command: command,
