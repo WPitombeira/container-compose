@@ -2819,6 +2819,75 @@ final class AppleContainerPlannerTests: XCTestCase {
         XCTAssertEqual(commands[0].diagnostics.first?.path, "scale")
     }
 
+    func testPlansCommitCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planCommit(
+            project: project,
+            service: "web",
+            options: .init(
+                author: "Jane Example <jane@example.com>",
+                changes: ["ENV DEBUG=1", "LABEL stage=dev"],
+                message: "capture debug state",
+                replicaIndex: 2,
+                pause: false,
+                repository: "example/web:debug"
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .commitService)
+        XCTAssertEqual(commands[0].service, "web")
+        XCTAssertEqual(commands[0].arguments, [
+            "commit",
+            "--author", "Jane Example <jane@example.com>",
+            "--change", "ENV DEBUG=1",
+            "--change", "LABEL stage=dev",
+            "--message", "capture debug state",
+            "--index", "2",
+            "--pause=false",
+            "demo_web_2",
+            "example/web:debug"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "commit"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "commit.change"
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "commit.pause"
+        })
+    }
+
+    func testPlansCommitWithoutServiceAsValidationDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planCommit(project: project, service: nil)
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .commitService)
+        XCTAssertEqual(commands[0].arguments, ["commit"])
+        XCTAssertEqual(commands[0].diagnostics.first?.severity, .error)
+        XCTAssertEqual(commands[0].diagnostics.first?.path, "commit.service")
+    }
+
     func testPlansRemoveCommandsForSelectedStoppedServicesInReverseStartOrder() {
         let project = ComposeProject(
             name: "demo",

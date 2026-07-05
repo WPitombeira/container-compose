@@ -160,6 +160,7 @@ container-compose unpause web
 container-compose attach web
 container-compose wait --down-project web
 container-compose scale --no-deps web=2
+container-compose commit --message snapshot web example/web:snapshot
 container-compose rm --stop web
 container-compose exec web sh
 container-compose cp web:/var/log/app.log ./app.log
@@ -197,5 +198,7 @@ Diagnostics are part of the product. Container Compose should warn when Compose 
 `container-compose wait [SERVICE...]` preserves Docker Compose's stop-wait intent, including `--down-project`. It is separate from `up --wait`, which models dependency readiness before starting services.
 
 `container-compose scale SERVICE=REPLICAS...` preserves Docker Compose's imperative replica-count intent, including `--no-deps`. Execution is blocked before invoking Apple Container until replica orchestration is verified.
+
+`container-compose commit [OPTIONS] SERVICE [REPOSITORY[:TAG]]` preserves Docker Compose's image-snapshot intent, including author, change, message, index, and pause options. Execution is blocked before invoking Apple Container until image commit behavior is verified.
 
 `container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

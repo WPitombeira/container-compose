@@ -1519,6 +1519,38 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "scale")
     }
 
+    func testFacadePlansCommitForSelectedServiceWithDiagnostic() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          web:
+            image: nginx
+          db:
+            image: postgres
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .commit,
+            projectDirectory: workdir.path,
+            projectName: "demo",
+            services: ["web"],
+            commitOptions: .init(message: "snapshot", repository: "example/web:snapshot")
+        ))
+
+        XCTAssertEqual(result.plan.operation, "commit")
+        XCTAssertEqual(result.plan.selectedServices, ["web"])
+        XCTAssertEqual(result.plan.commands.map(\.action), [.commitService])
+        XCTAssertEqual(result.plan.commands.first?.arguments, [
+            "commit",
+            "--message", "snapshot",
+            "demo_web_1",
+            "example/web:snapshot"
+        ])
+        XCTAssertEqual(result.plan.commands.first?.diagnostics.first?.path, "commit")
+    }
+
     func testFacadePlansRemoveWithStopForSelectedServices() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

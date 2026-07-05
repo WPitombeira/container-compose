@@ -19,6 +19,7 @@ public enum PlanAction: String, Codable, Sendable {
     case attachService
     case waitService
     case scaleService
+    case commitService
     case execService
     case copyService
     case logsService
@@ -309,7 +310,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -318,7 +319,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -327,7 +328,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -500,6 +501,31 @@ public struct AppleContainerScaleOptions: Codable, Equatable, Sendable {
 
     public init(noDependencies: Bool = false) {
         self.noDependencies = noDependencies
+    }
+}
+
+public struct AppleContainerCommitOptions: Codable, Equatable, Sendable {
+    public var author: String?
+    public var changes: [String]
+    public var message: String?
+    public var replicaIndex: Int
+    public var pause: Bool
+    public var repository: String?
+
+    public init(
+        author: String? = nil,
+        changes: [String] = [],
+        message: String? = nil,
+        replicaIndex: Int = 1,
+        pause: Bool = true,
+        repository: String? = nil
+    ) {
+        self.author = author
+        self.changes = changes
+        self.message = message
+        self.replicaIndex = replicaIndex
+        self.pause = pause
+        self.repository = repository
     }
 }
 
@@ -1177,6 +1203,100 @@ public struct AppleContainerPlanner: Sendable {
                 diagnostics: diagnostics
             )
         }
+    }
+
+    public func planCommit(
+        project: ComposeProject,
+        service serviceName: String?,
+        options: AppleContainerCommitOptions = .init()
+    ) -> [PlannedCommand] {
+        guard let serviceName, !serviceName.isEmpty else {
+            return [
+                PlannedCommand(
+                    action: .commitService,
+                    arguments: ["commit"],
+                    diagnostics: [
+                        .init(
+                            severity: .error,
+                            path: "commit.service",
+                            message: "Commit planning requires a service name."
+                        )
+                    ]
+                )
+            ]
+        }
+
+        guard let service = selectedOrderedServices(project.services, selectedServices: [serviceName]).first else {
+            return []
+        }
+
+        var arguments = ["commit"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "commit",
+                message: "Docker Compose commit creates an image from a service container, but Apple Container commit support is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        if let author = options.author, !author.isEmpty {
+            arguments.append(contentsOf: ["--author", author])
+        }
+
+        for change in options.changes where !change.isEmpty {
+            arguments.append(contentsOf: ["--change", change])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "commit.change",
+                message: "Docker Compose --change applies Dockerfile instructions during commit; Container Compose preserves the intent until image commit behavior is verified."
+            ))
+        }
+
+        if let message = options.message, !message.isEmpty {
+            arguments.append(contentsOf: ["--message", message])
+        }
+
+        let replicaIndex = max(options.replicaIndex, 1)
+        if options.replicaIndex < 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "commit.index",
+                message: "Replica index must be at least 1; using index 1 for Apple Container command planning."
+            ))
+        }
+
+        if service.containerName != nil, replicaIndex != 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "commit.index",
+                message: "Replica index is ignored for services that declare container_name."
+            ))
+        } else if replicaIndex != 1 {
+            arguments.append(contentsOf: ["--index", String(replicaIndex)])
+        }
+
+        if !options.pause {
+            arguments.append("--pause=false")
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "commit.pause",
+                message: "Docker Compose --pause=false is preserved for commit intent, but Apple Container pause-during-commit behavior is unverified."
+            ))
+        }
+
+        arguments.append(containerName(project: project.name, service: service, replicaIndex: replicaIndex))
+        if let repository = options.repository, !repository.isEmpty {
+            arguments.append(repository)
+        }
+
+        return [
+            PlannedCommand(
+                action: .commitService,
+                service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
     }
 
     public func planRemove(

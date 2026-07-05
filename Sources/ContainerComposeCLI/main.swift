@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
+        subcommands: [Config.self, Convert.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Pause.self, Unpause.self, Attach.self, Wait.self, Scale.self, Commit.self, Rm.self, Exec.self, Cp.self, Logs.self, Port.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -52,6 +52,7 @@ struct ComposeOptions: ParsableArguments {
         waitOptions: AppleContainerWaitOptions = .init(),
         scaleTargets: [String: Int] = [:],
         scaleOptions: AppleContainerScaleOptions = .init(),
+        commitOptions: AppleContainerCommitOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -93,6 +94,7 @@ struct ComposeOptions: ParsableArguments {
             waitOptions: waitOptions,
             scaleTargets: scaleTargets,
             scaleOptions: scaleOptions,
+            commitOptions: commitOptions,
             copySource: copySource,
             copyDestination: copyDestination,
             copyOptions: copyOptions,
@@ -870,6 +872,53 @@ struct Scale: ParsableCommand {
         }
 
         return (services, targets)
+    }
+}
+
+struct Commit: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Preview Docker Compose commit intent with Apple Container compatibility diagnostics.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Option(name: [.short, .customLong("author")], help: "Author for the created image.")
+    var author: String?
+
+    @Option(name: [.short, .customLong("change")], help: "Dockerfile instruction to apply to the created image. Can be specified multiple times.")
+    var changes: [String] = []
+
+    @Option(name: .customLong("index"), help: "Replica index for the service container.")
+    var index = 1
+
+    @Option(name: [.short, .customLong("message")], help: "Commit message.")
+    var message: String?
+
+    @Option(name: .customLong("pause"), help: "Pause the container during commit. Defaults to true.")
+    var pause = true
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable planned execution report.")
+    var json = false
+
+    @Argument(help: "Service name to commit.")
+    var service: String
+
+    @Argument(help: "Optional target repository or repository:tag.")
+    var repository: String?
+
+    func run() throws {
+        let commitOptions = AppleContainerCommitOptions(
+            author: author,
+            changes: changes,
+            message: message,
+            replicaIndex: index,
+            pause: pause,
+            repository: repository
+        )
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .commit,
+            services: [service],
+            commitOptions: commitOptions
+        ))
+        try execute(result.plan, dryRun: true, json: json, enforceReadiness: true)
     }
 }
 

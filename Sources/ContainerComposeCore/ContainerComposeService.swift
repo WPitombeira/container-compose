@@ -21,6 +21,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case attach
     case wait
     case scale
+    case commit
     case rm
     case exec
     case cp
@@ -60,6 +61,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
     public var waitOptions: AppleContainerWaitOptions
     public var scaleTargets: [String: Int]
     public var scaleOptions: AppleContainerScaleOptions
+    public var commitOptions: AppleContainerCommitOptions
     public var copySource: String?
     public var copyDestination: String?
     public var copyOptions: AppleContainerCopyOptions
@@ -97,6 +99,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         waitOptions: AppleContainerWaitOptions = .init(),
         scaleTargets: [String: Int] = [:],
         scaleOptions: AppleContainerScaleOptions = .init(),
+        commitOptions: AppleContainerCommitOptions = .init(),
         copySource: String? = nil,
         copyDestination: String? = nil,
         copyOptions: AppleContainerCopyOptions = .init(),
@@ -133,6 +136,7 @@ public struct ContainerComposePlanRequest: Equatable, Sendable {
         self.waitOptions = waitOptions
         self.scaleTargets = scaleTargets
         self.scaleOptions = scaleOptions
+        self.commitOptions = commitOptions
         self.copySource = copySource
         self.copyDestination = copyDestination
         self.copyOptions = copyOptions
@@ -382,6 +386,12 @@ public struct ContainerComposeService: Sendable {
                 services: request.services,
                 options: request.scaleOptions
             )
+        case .commit:
+            return planner.planCommit(
+                project: project,
+                service: request.services.first,
+                options: request.commitOptions
+            )
         case .rm:
             return planner.planRemove(
                 project: project,
@@ -533,7 +543,7 @@ public struct ContainerComposeService: Sendable {
 
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
+        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
         case .config, .convert, .down:
             return false
