@@ -37,6 +37,27 @@ final class ComposeConfigProjectionTests: XCTestCase {
         XCTAssertEqual(projection.values, ["example/api:dev", "busybox:latest"])
     }
 
+    func testProjectsInterpolationEnvironmentDeterministically() {
+        let project = makeProject()
+
+        XCTAssertEqual(
+            ComposeConfigProjection.values(
+                for: .environment,
+                in: project,
+                interpolationEnvironment: [
+                    "TAG": "latest",
+                    "IMAGE": "nginx",
+                    "EMPTY": ""
+                ]
+            ),
+            [
+                "EMPTY=",
+                "IMAGE=nginx",
+                "TAG=latest"
+            ]
+        )
+    }
+
     private func makeProject() -> ComposeProject {
         ComposeProject(
             name: "demo",

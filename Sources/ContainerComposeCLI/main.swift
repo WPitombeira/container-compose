@@ -148,7 +148,13 @@ struct Config: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        try renderOptions.render(project: try options.loadProject(), commandName: "config")
+        let request = try options.makeRequest(operation: .config)
+        let project = try ContainerComposeService().loadProject(request)
+        try renderOptions.render(
+            project: project,
+            interpolationEnvironment: interpolationEnvironment(for: project, request: request),
+            commandName: "config"
+        )
     }
 }
 
@@ -159,8 +165,29 @@ struct Convert: ParsableCommand {
     @OptionGroup var renderOptions: ConfigRenderOptions
 
     func run() throws {
-        try renderOptions.render(project: try options.loadProject(operation: .convert), commandName: "convert")
+        let request = try options.makeRequest(operation: .convert)
+        let project = try ContainerComposeService().loadProject(request)
+        try renderOptions.render(
+            project: project,
+            interpolationEnvironment: interpolationEnvironment(for: project, request: request),
+            commandName: "convert"
+        )
     }
+}
+
+private func interpolationEnvironment(
+    for project: ComposeProject,
+    request: ContainerComposePlanRequest
+) -> [String: String] {
+    let sourceDirectory = URL(fileURLWithPath: project.sourcePath)
+        .deletingLastPathComponent()
+        .standardizedFileURL
+        .path
+    return EnvironmentResolver(
+        workingDirectory: sourceDirectory,
+        environment: request.environment,
+        envFiles: request.composeEnvFiles.isEmpty ? nil : request.composeEnvFiles
+    ).interpolationEnvironment
 }
 
 struct ConfigRenderOptions: ParsableArguments {
@@ -182,6 +209,9 @@ struct ConfigRenderOptions: ParsableArguments {
     @Flag(name: .customLong("models"), help: "Print model names, one per line.")
     var models = false
 
+    @Flag(name: .customLong("environment"), help: "Print environment used for interpolation.")
+    var environment = false
+
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false
 
@@ -191,13 +221,21 @@ struct ConfigRenderOptions: ParsableArguments {
     @Option(name: [.short, .customLong("output")], help: "Write config output to a file instead of stdout.")
     var output: String?
 
-    func render(project: ComposeProject, commandName: String) throws {
+    func render(
+        project: ComposeProject,
+        interpolationEnvironment: [String: String] = [:],
+        commandName: String
+    ) throws {
         let renderFormat = try ComposeConfigRenderer.parseFormat(format)
         if quiet {
             return
         }
         if let projectionMode = try selectedProjectionMode(commandName: commandName) {
-            let text = ComposeConfigProjection.values(for: projectionMode, in: project).joined(separator: "\n") + "\n"
+            let text = ComposeConfigProjection.values(
+                for: projectionMode,
+                in: project,
+                interpolationEnvironment: interpolationEnvironment
+            ).joined(separator: "\n") + "\n"
             try writeConfigOutput(text)
             return
         }
@@ -212,7 +250,8 @@ struct ConfigRenderOptions: ParsableArguments {
             (profiles, .profiles),
             (networks, .networks),
             (volumes, .volumes),
-            (models, .models)
+            (models, .models),
+            (environment, .environment)
         ]
         let modes = selected.compactMap { isSelected, mode in
             isSelected ? mode : nil

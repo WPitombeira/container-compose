@@ -183,6 +183,42 @@ final class EnvironmentResolverTests: XCTestCase {
         XCTAssertEqual(resolver.resolve("${IMAGE}:${TAG}"), "from-process:override")
     }
 
+    func testInterpolationEnvironmentUsesResolutionPrecedence() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try "IMAGE=from-dot-env\nTAG=dot\nDOT_ONLY=1\n".write(
+            to: workdir.appendingPathComponent(".env"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "IMAGE=from-defaults\nTAG=defaults\nDEFAULT_ONLY=1\n".write(
+            to: workdir.appendingPathComponent("defaults.env"),
+            atomically: true,
+            encoding: .utf8
+        )
+        try "TAG=override\nLOCAL_ONLY=1\n".write(
+            to: workdir.appendingPathComponent("local.env"),
+            atomically: true,
+            encoding: .utf8
+        )
+
+        let resolver = EnvironmentResolver(
+            workingDirectoryURL: workdir,
+            environment: ["IMAGE": "from-process", "PROCESS_ONLY": "1"],
+            envFiles: ["defaults.env", "local.env"]
+        )
+
+        XCTAssertEqual(resolver.interpolationEnvironment, [
+            "IMAGE": "from-process",
+            "TAG": "override",
+            "DEFAULT_ONLY": "1",
+            "LOCAL_ONLY": "1",
+            "PROCESS_ONLY": "1"
+        ])
+        XCTAssertNil(resolver.interpolationEnvironment["DOT_ONLY"])
+    }
+
     private func makeTemporaryWorkdir() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("container-compose-resolver-tests")

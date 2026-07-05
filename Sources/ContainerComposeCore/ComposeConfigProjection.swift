@@ -7,6 +7,7 @@ public enum ComposeConfigProjectionMode: String, Codable, CaseIterable, Sendable
     case networks
     case volumes
     case models
+    case environment
 }
 
 public struct ComposeConfigProjection: Codable, Equatable, Sendable {
@@ -18,7 +19,11 @@ public struct ComposeConfigProjection: Codable, Equatable, Sendable {
         self.values = values
     }
 
-    public static func values(for mode: ComposeConfigProjectionMode, in project: ComposeProject) -> [String] {
+    public static func values(
+        for mode: ComposeConfigProjectionMode,
+        in project: ComposeProject,
+        interpolationEnvironment: [String: String] = [:]
+    ) -> [String] {
         switch mode {
         case .services:
             return project.services.map(\.name)
@@ -32,6 +37,8 @@ public struct ComposeConfigProjection: Codable, Equatable, Sendable {
             return project.volumes.keys.sorted()
         case .models:
             return project.models.keys.sorted()
+        case .environment:
+            return environmentValues(interpolationEnvironment)
         }
     }
 
@@ -46,5 +53,11 @@ public struct ComposeConfigProjection: Codable, Equatable, Sendable {
             result.append(value)
         }
         return result
+    }
+
+    public static func environmentValues(_ environment: [String: String]) -> [String] {
+        environment.keys.sorted().map { key in
+            "\(key)=\(environment[key] ?? "")"
+        }
     }
 }

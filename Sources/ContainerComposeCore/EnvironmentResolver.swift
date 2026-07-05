@@ -33,6 +33,10 @@ public struct EnvironmentResolver: Sendable {
         (try? resolveWithDiagnostics(text).text) ?? text
     }
 
+    public var interpolationEnvironment: [String: String] {
+        envFileValues.merging(processEnvironment) { _, processValue in processValue }
+    }
+
     public func resolveWithDiagnostics(_ text: String) throws -> EnvironmentResolution {
         let chars = Array(text)
         guard !chars.isEmpty else {

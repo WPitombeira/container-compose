@@ -56,6 +56,7 @@ From a directory containing `compose.yaml`:
 ```sh
 container-compose config
 container-compose convert --format yaml
+container-compose config --environment
 container-compose config --models
 container-compose version
 container-compose compatibility
