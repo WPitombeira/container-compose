@@ -150,10 +150,13 @@ struct Config: ParsableCommand {
 
     @OptionGroup var options: ComposeOptions
     @OptionGroup var renderOptions: ConfigRenderOptions
+    @Argument(help: "Optional service names to render, including their dependencies.")
+    var services: [String] = []
 
     func run() throws {
         let request = try options.makeRequest(
             operation: .config,
+            services: services,
             interpolate: !renderOptions.noInterpolate,
             resolveServiceEnvFiles: !renderOptions.noEnvResolution
         )
@@ -172,10 +175,13 @@ struct Convert: ParsableCommand {
 
     @OptionGroup var options: ComposeOptions
     @OptionGroup var renderOptions: ConfigRenderOptions
+    @Argument(help: "Optional service names to render, including their dependencies.")
+    var services: [String] = []
 
     func run() throws {
         let request = try options.makeRequest(
             operation: .convert,
+            services: services,
             interpolate: !renderOptions.noInterpolate,
             resolveServiceEnvFiles: !renderOptions.noEnvResolution
         )

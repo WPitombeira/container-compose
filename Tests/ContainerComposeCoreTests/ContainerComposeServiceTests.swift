@@ -1188,6 +1188,49 @@ final class ContainerComposeServiceTests: XCTestCase {
         XCTAssertEqual(result.plan.selectedServices, [])
     }
 
+    func testFacadeConfigCanRenderSelectedServiceWithDependencies() throws {
+        let workdir = try makeTemporaryWorkdir()
+        defer { try? FileManager.default.removeItem(at: workdir) }
+
+        try """
+        services:
+          redis:
+            image: redis:7-alpine
+            volumes:
+              - redis-data:/data
+          web:
+            image: nginx:alpine
+            depends_on:
+              - redis
+            networks:
+              - front
+          worker:
+            image: busybox
+            networks:
+              - back
+        networks:
+          front: {}
+          back: {}
+        volumes:
+          redis-data: {}
+        """.write(to: workdir.appendingPathComponent("compose.yaml"), atomically: true, encoding: .utf8)
+
+        let result = try ContainerComposeService().makePlan(.init(
+            operation: .config,
+            projectDirectory: workdir.path,
+            projectName: "demo",
+            resolveServiceEnvFiles: true,
+            services: ["web"]
+        ))
+
+        XCTAssertEqual(result.project.services.map(\.name), ["redis", "web"])
+        XCTAssertEqual(Set(result.project.networks.keys), ["default", "front"])
+        XCTAssertEqual(Set(result.project.volumes.keys), ["redis-data"])
+        XCTAssertEqual(result.plan.operation, "config")
+        XCTAssertTrue(result.plan.commands.isEmpty)
+        XCTAssertEqual(result.plan.selectedServices, ["web"])
+    }
+
     func testFacadeDownCanRemoveNetworksAndOptInVolumes() throws {
         let workdir = try makeTemporaryWorkdir()
         defer { try? FileManager.default.removeItem(at: workdir) }

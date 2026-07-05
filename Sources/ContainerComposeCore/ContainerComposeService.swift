@@ -260,6 +260,7 @@ public struct ContainerComposeService: Sendable {
             project.name = effectiveProjectName
             appendContainerNameCollisionDiagnostics(to: &project)
         }
+        project = filterProjectForOperation(project, request: request)
         return project
     }
 
@@ -628,11 +629,21 @@ public struct ContainerComposeService: Sendable {
         operationUsesServiceTargets(request.operation) ? Set(request.services) : []
     }
 
+    private func filterProjectForOperation(
+        _ project: ComposeProject,
+        request: ContainerComposePlanRequest
+    ) -> ComposeProject {
+        guard request.operation == .config || request.operation == .convert else {
+            return project
+        }
+        return ComposeProjectFilter().filter(project, selectedServices: request.services)
+    }
+
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .export, .events, .watch, .volumes, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
+        case .config, .convert, .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .pause, .unpause, .attach, .wait, .scale, .commit, .export, .events, .watch, .volumes, .rm, .exec, .cp, .port, .logs, .ps, .top, .stats:
             return true
-        case .config, .convert, .down, .publish, .ls:
+        case .down, .publish, .ls:
             return false
         }
     }

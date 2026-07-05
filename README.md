@@ -55,6 +55,7 @@ From a directory containing `compose.yaml`:
 
 ```sh
 container-compose config
+container-compose config web
 container-compose convert --format yaml
 container-compose config --environment
 container-compose config --variables
