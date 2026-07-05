@@ -7,7 +7,7 @@ struct ContainerCompose: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "container-compose",
         abstract: "Compose-style orchestration for Apple's container runtime.",
-        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Ps.self, Stats.self],
+        subcommands: [Config.self, Plan.self, Version.self, Compatibility.self, Doctor.self, Up.self, Run.self, Create.self, Build.self, Down.self, Start.self, Pull.self, Push.self, Images.self, Stop.self, Restart.self, Kill.self, Rm.self, Exec.self, Cp.self, Logs.self, Ps.self, Top.self, Stats.self],
         defaultSubcommand: Plan.self
     )
 }
@@ -903,6 +903,29 @@ struct Ps: ParsableCommand {
             operation: .ps,
             services: services,
             all: all
+        ))
+        try execute(result.plan, dryRun: dryRun, json: json)
+    }
+}
+
+struct Top: ParsableCommand {
+    static let configuration = CommandConfiguration(abstract: "Display running processes for service containers.")
+
+    @OptionGroup var options: ComposeOptions
+
+    @Flag(help: "Print commands without executing them.")
+    var dryRun = false
+
+    @Flag(name: .customLong("json"), help: "Print a machine-readable execution report.")
+    var json = false
+
+    @Argument(help: "Optional service names to inspect.")
+    var services: [String] = []
+
+    func run() throws {
+        let result = try ContainerComposeService().makePlan(try options.makeRequest(
+            operation: .top,
+            services: services
         ))
         try execute(result.plan, dryRun: dryRun, json: json)
     }

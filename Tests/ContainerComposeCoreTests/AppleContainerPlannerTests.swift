@@ -2925,6 +2925,26 @@ final class AppleContainerPlannerTests: XCTestCase {
         XCTAssertEqual(commands[0].arguments, ["stats", "demo_web_1"])
     }
 
+    func testPlansTopForSelectedServiceAsInContainerProcessView() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx"),
+                ComposeService(name: "db", image: "postgres")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planTop(project: project, services: ["web"])
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .topService)
+        XCTAssertEqual(commands[0].service, "web")
+        XCTAssertEqual(commands[0].arguments, ["exec", "demo_web_1", "ps"])
+        XCTAssertEqual(commands[0].diagnostics.first?.severity, .warning)
+        XCTAssertEqual(commands[0].diagnostics.first?.path, "top")
+    }
+
     func testPlanDownRemovesServicesAndProjectNetworksButKeepsVolumesByDefault() {
         let project = ComposeProject(
             name: "demo",

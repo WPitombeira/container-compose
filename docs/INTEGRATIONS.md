@@ -84,6 +84,7 @@ Use:
 - Treat `ComposeProject` as the source of truth for the active Compose model.
 - Treat `AppleContainerPlan.commands` as the source of truth for executable previews.
 - Treat diagnostics as structured product data, not log strings.
+- Surface command-level diagnostics for compatibility mappings such as `top`, where Apple Container can execute a useful fallback but cannot expose Docker's exact process table.
 - Keep remote include fetching app-owned through the injectable resolver.
 - Do not re-derive container names in the UI. Use the planner's effective names and readiness metadata.
 - Preserve backward-compatible decoding for versioned JSON types whenever adding optional fields.

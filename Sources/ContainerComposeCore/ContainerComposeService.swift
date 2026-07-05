@@ -20,6 +20,7 @@ public enum ContainerComposeOperation: String, Codable, CaseIterable, Sendable {
     case cp
     case logs
     case ps
+    case top
     case stats
 }
 
@@ -347,6 +348,8 @@ public struct ContainerComposeService: Sendable {
             return planner.planLogs(project: project, services: request.services, follow: request.follow, tail: request.tail)
         case .ps:
             return planner.planPs(project: project, services: request.services, all: request.all)
+        case .top:
+            return planner.planTop(project: project, services: request.services)
         case .stats:
             return planner.planStats(project: project, services: request.services, noStream: request.noStream)
         }
@@ -471,7 +474,7 @@ public struct ContainerComposeService: Sendable {
 
     private func operationUsesServiceTargets(_ operation: ContainerComposeOperation) -> Bool {
         switch operation {
-        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .rm, .exec, .cp, .logs, .ps, .stats:
+        case .plan, .up, .run, .create, .build, .start, .pull, .push, .images, .stop, .restart, .kill, .rm, .exec, .cp, .logs, .ps, .top, .stats:
             return true
         case .config, .down:
             return false

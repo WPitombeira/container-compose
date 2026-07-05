@@ -18,6 +18,7 @@ public enum PlanAction: String, Codable, Sendable {
     case copyService
     case logsService
     case listServices
+    case topService
     case statsService
     case deleteService
     case deleteNetwork
@@ -303,7 +304,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .execService, .copyService, .logsService, .listServices, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -312,7 +313,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .execService, .copyService, .logsService, .listServices, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -321,7 +322,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .execService, .copyService, .logsService, .listServices, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -1229,6 +1230,26 @@ public struct AppleContainerPlanner: Sendable {
                 arguments: arguments
             )
         ]
+    }
+
+    public func planTop(
+        project: ComposeProject,
+        services selectedServices: [String] = []
+    ) -> [PlannedCommand] {
+        selectedOrderedServices(project.services, selectedServices: selectedServices).map { service in
+            PlannedCommand(
+                action: .topService,
+                service: service.name,
+                arguments: ["exec", containerName(project: project.name, service: service), "ps"],
+                diagnostics: [
+                    .init(
+                        severity: .warning,
+                        path: "top",
+                        message: "Docker Compose top displays Docker engine process information; Apple Container mapping executes ps inside each selected service container."
+                    )
+                ]
+            )
+        }
     }
 
     private func stopCommand(project: ComposeProject, service: ComposeService) -> PlannedCommand {

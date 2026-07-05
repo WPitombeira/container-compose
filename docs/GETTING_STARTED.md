@@ -159,6 +159,7 @@ container-compose exec web sh
 container-compose cp web:/var/log/app.log ./app.log
 container-compose logs --follow web
 container-compose ps web
+container-compose top web
 container-compose stats --no-stream web
 container-compose down --volumes
 ```
@@ -177,3 +178,5 @@ container-compose down --volumes
 - Optional execution graph and readiness metadata.
 
 Diagnostics are part of the product. Container Compose should warn when Compose behavior is preserved but not yet mapped to Apple Container, and error when a Compose file is contradictory or invalid.
+
+`container-compose top` maps Docker Compose's process view to `container exec SERVICE ps` for each selected service and emits a diagnostic because Apple Container does not expose Docker's host-side process table.

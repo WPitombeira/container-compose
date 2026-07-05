@@ -61,6 +61,7 @@ container-compose compatibility --area planner --status preservedDiagnostic
 container-compose plan
 container-compose up --detach
 container-compose logs --follow web
+container-compose top web
 container-compose down
 ```
 
@@ -86,7 +87,7 @@ Container Compose currently supports a pragmatic Compose subset for local macOS 
 
 - Services, images, builds, environment, env files, labels, ports, volumes, networks, configs, secrets, profiles, includes, and service `extends`.
 - Docker Compose-style ordered file merging, including `!reset`, `!override`, unique resource merge keys, and duplicate-free sequences.
-- Apple Container command planning for build, pull, push, up, run, create, down, start, stop, restart, kill, rm, exec, cp, logs, ps, stats, images, config, compatibility, and doctor workflows.
+- Apple Container command planning for build, pull, push, up, run, create, down, start, stop, restart, kill, rm, exec, cp, logs, ps, top, stats, images, config, compatibility, and doctor workflows.
 - Structured diagnostics for Compose fields that are preserved but not yet mapped to Apple Container.
 - Versioned JSON plan, execution-report, runtime-status, execution-graph, and tool metadata envelopes for app integrations.
 
