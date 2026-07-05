@@ -20,6 +20,7 @@ public enum PlanAction: String, Codable, Sendable {
     case waitService
     case scaleService
     case commitService
+    case exportService
     case eventsProject
     case listProjects
     case execService
@@ -312,7 +313,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .delegateService, .runService, .startService, .restartService:
             return true
-        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -321,7 +322,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .createService, .runService:
             return true
-        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .buildService, .delegateService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .startService, .stopService, .restartService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -330,7 +331,7 @@ public struct AppleContainerExecutionGraph: Codable, Equatable, Sendable {
         switch action {
         case .runService, .startService, .restartService:
             return true
-        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
+        case .createService, .delegateService, .buildService, .pullImage, .pushImage, .listImages, .createNetwork, .createVolume, .stopService, .killService, .pauseService, .unpauseService, .attachService, .waitService, .scaleService, .commitService, .exportService, .eventsProject, .listProjects, .execService, .copyService, .logsService, .listServices, .topService, .statsService, .deleteService, .deleteNetwork, .deleteVolume:
             return false
         }
     }
@@ -528,6 +529,19 @@ public struct AppleContainerCommitOptions: Codable, Equatable, Sendable {
         self.replicaIndex = replicaIndex
         self.pause = pause
         self.repository = repository
+    }
+}
+
+public struct AppleContainerExportOptions: Codable, Equatable, Sendable {
+    public var replicaIndex: Int
+    public var output: String?
+
+    public init(
+        replicaIndex: Int = 1,
+        output: String? = nil
+    ) {
+        self.replicaIndex = replicaIndex
+        self.output = output
     }
 }
 
@@ -1329,6 +1343,80 @@ public struct AppleContainerPlanner: Sendable {
         return [
             PlannedCommand(
                 action: .commitService,
+                service: service.name,
+                arguments: arguments,
+                diagnostics: diagnostics
+            )
+        ]
+    }
+
+    public func planExport(
+        project: ComposeProject,
+        service serviceName: String?,
+        options: AppleContainerExportOptions = .init()
+    ) -> [PlannedCommand] {
+        guard let serviceName, !serviceName.isEmpty else {
+            return [
+                PlannedCommand(
+                    action: .exportService,
+                    arguments: ["export"],
+                    diagnostics: [
+                        .init(
+                            severity: .error,
+                            path: "export.service",
+                            message: "Export planning requires a service name."
+                        )
+                    ]
+                )
+            ]
+        }
+
+        guard let service = selectedOrderedServices(project.services, selectedServices: [serviceName]).first else {
+            return []
+        }
+
+        var arguments = ["export"]
+        var diagnostics: [ComposeDiagnostic] = [
+            .init(
+                severity: .warning,
+                path: "export",
+                message: "Docker Compose export writes a service container filesystem as a tar archive, but Apple Container export support is unavailable or unverified; this planned action is not executable yet."
+            )
+        ]
+
+        let replicaIndex = max(options.replicaIndex, 1)
+        if options.replicaIndex < 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "export.index",
+                message: "Replica index must be at least 1; using index 1 for Apple Container command planning."
+            ))
+        }
+
+        if service.containerName != nil, replicaIndex != 1 {
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "export.index",
+                message: "Replica index is ignored for services that declare container_name."
+            ))
+        } else if replicaIndex != 1 {
+            arguments.append(contentsOf: ["--index", String(replicaIndex)])
+        }
+
+        if let output = options.output, !output.isEmpty {
+            arguments.append(contentsOf: ["--output", output])
+            diagnostics.append(.init(
+                severity: .warning,
+                path: "export.output",
+                message: "Docker Compose --output writes the export archive to a file; Container Compose preserves the target path until Apple Container tar export behavior is verified."
+            ))
+        }
+
+        arguments.append(containerName(project: project.name, service: service, replicaIndex: replicaIndex))
+
+        return [
+            PlannedCommand(
+                action: .exportService,
                 service: service.name,
                 arguments: arguments,
                 diagnostics: diagnostics

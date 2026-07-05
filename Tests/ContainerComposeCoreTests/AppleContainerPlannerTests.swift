@@ -2888,6 +2888,62 @@ final class AppleContainerPlannerTests: XCTestCase {
         XCTAssertEqual(commands[0].diagnostics.first?.path, "commit.service")
     }
 
+    func testPlansExportCommandWithUnsupportedRuntimeDiagnosticAndOptions() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planExport(
+            project: project,
+            service: "web",
+            options: .init(
+                replicaIndex: 2,
+                output: "./web.tar"
+            )
+        )
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .exportService)
+        XCTAssertEqual(commands[0].service, "web")
+        XCTAssertEqual(commands[0].arguments, [
+            "export",
+            "--index", "2",
+            "--output", "./web.tar",
+            "demo_web_2"
+        ])
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "export"
+                && $0.message.contains("not executable yet")
+        })
+        XCTAssertTrue(commands[0].diagnostics.contains {
+            $0.severity == .warning
+                && $0.path == "export.output"
+        })
+    }
+
+    func testPlansExportWithoutServiceAsValidationDiagnostic() {
+        let project = ComposeProject(
+            name: "demo",
+            services: [
+                ComposeService(name: "web", image: "nginx")
+            ],
+            sourcePath: "compose.yaml"
+        )
+
+        let commands = AppleContainerPlanner().planExport(project: project, service: nil)
+
+        XCTAssertEqual(commands.count, 1)
+        XCTAssertEqual(commands[0].action, .exportService)
+        XCTAssertEqual(commands[0].arguments, ["export"])
+        XCTAssertEqual(commands[0].diagnostics.first?.severity, .error)
+        XCTAssertEqual(commands[0].diagnostics.first?.path, "export.service")
+    }
+
     func testPlansEventsCommandWithUnsupportedRuntimeDiagnosticAndFilters() {
         let project = ComposeProject(
             name: "demo",
