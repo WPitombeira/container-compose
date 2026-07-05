@@ -179,6 +179,9 @@ struct ConfigRenderOptions: ParsableArguments {
     @Flag(name: .customLong("volumes"), help: "Print volume names, one per line.")
     var volumes = false
 
+    @Flag(name: .customLong("models"), help: "Print model names, one per line.")
+    var models = false
+
     @Flag(name: [.short, .customLong("quiet")], help: "Only validate the configuration.")
     var quiet = false
 
@@ -208,7 +211,8 @@ struct ConfigRenderOptions: ParsableArguments {
             (images, .images),
             (profiles, .profiles),
             (networks, .networks),
-            (volumes, .volumes)
+            (volumes, .volumes),
+            (models, .models)
         ]
         let modes = selected.compactMap { isSelected, mode in
             isSelected ? mode : nil

@@ -20,12 +20,13 @@ final class ComposeConfigProjectionTests: XCTestCase {
         )
     }
 
-    func testProjectsProfilesNetworksAndVolumesDeterministically() {
+    func testProjectsProfilesNetworksVolumesAndModelsDeterministically() {
         let project = makeProject()
 
         XCTAssertEqual(ComposeConfigProjection.values(for: .profiles, in: project), ["debug", "jobs"])
         XCTAssertEqual(ComposeConfigProjection.values(for: .networks, in: project), ["back", "front"])
         XCTAssertEqual(ComposeConfigProjection.values(for: .volumes, in: project), ["cache", "db-data"])
+        XCTAssertEqual(ComposeConfigProjection.values(for: .models, in: project), ["embeddings", "llm"])
     }
 
     func testProjectionEnvelopeCarriesModeAndValues() {
@@ -51,6 +52,10 @@ final class ComposeConfigProjectionTests: XCTestCase {
             volumes: [
                 "db-data": ComposeVolume(name: "db-data"),
                 "cache": ComposeVolume(name: "cache")
+            ],
+            models: [
+                "llm": ComposeModelDefinition(name: "llm", model: "ai/smollm2"),
+                "embeddings": ComposeModelDefinition(name: "embeddings", model: "ai/mxbai-embed-large")
             ],
             sourcePath: "compose.yaml"
         )

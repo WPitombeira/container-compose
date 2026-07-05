@@ -56,6 +56,7 @@ From a directory containing `compose.yaml`:
 ```sh
 container-compose config
 container-compose convert --format yaml
+container-compose config --models
 container-compose version
 container-compose compatibility
 container-compose compatibility --area planner --status preservedDiagnostic
@@ -97,7 +98,7 @@ See [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) for more CLI examples.
 
 Container Compose currently supports a pragmatic Compose subset for local macOS development:
 
-- Services, images, builds, environment, env files, labels, ports, volumes, networks, configs, secrets, profiles, includes, and service `extends`.
+- Services, images, builds, environment, env files, labels, ports, volumes, networks, configs, secrets, models, profiles, includes, and service `extends`.
 - Docker Compose-style ordered file merging, including `!reset`, `!override`, unique resource merge keys, and duplicate-free sequences.
 - Apple Container command planning, model lookups, and diagnostic placeholders for build, pull, push, publish, up, run, create, down, start, stop, restart, kill, pause, unpause, attach, wait, scale, commit, export, events, watch, ls, volumes, rm, exec, cp, port, logs, ps, top, stats, images, config, convert, compatibility, and doctor workflows.
 - Structured diagnostics for Compose fields that are preserved but not yet mapped to Apple Container.

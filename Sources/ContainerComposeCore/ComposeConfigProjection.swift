@@ -6,6 +6,7 @@ public enum ComposeConfigProjectionMode: String, Codable, CaseIterable, Sendable
     case profiles
     case networks
     case volumes
+    case models
 }
 
 public struct ComposeConfigProjection: Codable, Equatable, Sendable {
@@ -29,6 +30,8 @@ public struct ComposeConfigProjection: Codable, Equatable, Sendable {
             return project.networks.keys.sorted()
         case .volumes:
             return project.volumes.keys.sorted()
+        case .models:
+            return project.models.keys.sorted()
         }
     }
 

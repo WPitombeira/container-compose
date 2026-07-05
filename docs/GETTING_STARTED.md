@@ -139,6 +139,7 @@ container-compose convert --format yaml
 container-compose config --format yaml
 container-compose config --services
 container-compose config --images
+container-compose config --models
 container-compose version
 container-compose version --format json
 container-compose compatibility --format json
@@ -182,7 +183,7 @@ container-compose down --volumes
 
 `container-compose version --format json` emits the tool version plus the current plan, execution-report, execution-graph, and runtime-status schema versions.
 
-`container-compose convert` is a Docker Compose-compatible alias for rendering the normalized model. It shares the same projection flags as `config`, including `--services`, `--images`, `--profiles`, `--networks`, `--volumes`, `--format`, `--output`, and `--quiet`.
+`container-compose convert` is a Docker Compose-compatible alias for rendering the normalized model. It shares the same projection flags as `config`, including `--services`, `--images`, `--profiles`, `--networks`, `--volumes`, `--models`, `--format`, `--output`, and `--quiet`.
 
 `container-compose plan` emits a versioned JSON envelope containing:
 
